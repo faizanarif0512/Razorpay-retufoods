@@ -2,7 +2,10 @@ import crypto from 'crypto';
 import type { NextRequest } from 'next/server';
 import { getDb, verifyPassword } from '../db/index.ts';
 
-const SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || 'retu_secret_session_key_min_32_characters_long_replace_in_prod';
+if (!process.env.ADMIN_SESSION_SECRET && process.env.NODE_ENV === 'production') {
+  console.warn('[SECURITY WARNING] ADMIN_SESSION_SECRET is not set in production environment.');
+}
+const SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || 'dev_admin_session_secret_min_32_chars!';
 const SESSION_COOKIE_NAME = 'retu_admin_token';
 
 export interface AdminSession {

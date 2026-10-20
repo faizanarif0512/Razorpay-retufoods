@@ -3,7 +3,10 @@ import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { getCustomerById, Customer } from '../db/service';
 
-const SESSION_SECRET = process.env.CUSTOMER_SESSION_SECRET || process.env.ADMIN_SESSION_SECRET || 'retu_customer_secret_key_2026_secured';
+if (!process.env.CUSTOMER_SESSION_SECRET && process.env.NODE_ENV === 'production') {
+  console.warn('[SECURITY WARNING] CUSTOMER_SESSION_SECRET is not set in production environment.');
+}
+const SESSION_SECRET = process.env.CUSTOMER_SESSION_SECRET || process.env.ADMIN_SESSION_SECRET || 'dev_customer_session_secret_min_32_chars!';
 const COOKIE_NAME = 'retu_customer_session';
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days persistent
 

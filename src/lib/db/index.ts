@@ -270,7 +270,7 @@ function seedInitialData(db: any) {
   const adminStmt = db.prepare('SELECT id FROM admin_users WHERE email = ?');
   const existingAdmin = adminStmt.get('admin@retufoods.com');
   if (!existingAdmin) {
-    const defaultPassword = process.env.ADMIN_INITIAL_PASSWORD || 'ChangeMeInProduction2026!';
+    const defaultPassword = process.env.ADMIN_INITIAL_PASSWORD || 'RetuAdminInitialPass2026!';
     const { hash, salt } = hashPassword(defaultPassword);
     const insertAdmin = db.prepare(`
       INSERT INTO admin_users (id, email, password_hash, password_salt, role, name, is_active, created_at)
