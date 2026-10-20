@@ -188,6 +188,11 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (err: any) {
     console.error('Checkout error:', err);
-    return NextResponse.json({ success: false, error: err.message || 'Internal order creation failed' }, { status: 500 });
+    const errorMessage =
+      err?.error?.description ||
+      err?.description ||
+      err?.message ||
+      'Internal order creation failed';
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }

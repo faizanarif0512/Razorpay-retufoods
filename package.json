@@ -7,15 +7,20 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --experimental-strip-types test/pricing_and_order.test.mjs && node --experimental-strip-types test/payments_and_webhooks.test.mjs"
+    "test": "node --experimental-strip-types test/pricing_and_order.test.mjs && node --experimental-strip-types test/payments_and_webhooks.test.mjs",
+    "db:setup": "node scripts/setup-neon.mjs",
+    "db:sync": "node scripts/sync-sqlite-to-neon.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "@types/pdfkit": "^0.17.6",
+    "@types/pg": "^8.23.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.475.0",
     "next": "^15.1.7",
     "nodemailer": "^10.1.0",
     "pdfkit": "^0.20.2",
+    "pg": "^8.23.1",
     "razorpay": "^2.9.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

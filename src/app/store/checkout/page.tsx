@@ -43,6 +43,7 @@ export default function CheckoutPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isPaymentProcessingRef = React.useRef(false);
 
   // Active Razorpay Modal State
   const [razorpayData, setRazorpayData] = useState<{
@@ -117,6 +118,7 @@ export default function CheckoutPage() {
 
     setLoading(true);
     setError(null);
+    isPaymentProcessingRef.current = false;
 
     try {
       // Step 1: Request order creation & server-side validation
@@ -164,6 +166,11 @@ export default function CheckoutPage() {
   const handlePaymentSuccess = async (paymentId: string, signature: string) => {
     if (!razorpayData) return;
 
+    isPaymentProcessingRef.current = true;
+    const targetOrderReference = razorpayData.orderReference;
+    const targetOrderId = razorpayData.orderId;
+    const targetRazorpayOrderId = razorpayData.razorpayOrderId;
+
     setLoading(true);
     setError(null);
 
@@ -172,8 +179,8 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orderId: razorpayData.orderId,
-          razorpayOrderId: razorpayData.razorpayOrderId,
+          orderId: targetOrderId,
+          razorpayOrderId: targetRazorpayOrderId,
           razorpayPaymentId: paymentId,
           razorpaySignature: signature,
         }),
@@ -184,18 +191,21 @@ export default function CheckoutPage() {
         throw new Error(data.error || 'Payment verification failed on the server');
       }
 
-      // Success: Clear cart & redirect to verified confirmation page
+      // Success: Clear cart & hard redirect to verified confirmation page
       clearCart();
-      router.push(`/store/order-confirmation/${razorpayData.orderReference}`);
+      setRazorpayData(null);
+      window.location.href = `/store/order-confirmation/${targetOrderReference}`;
     } catch (err: any) {
+      isPaymentProcessingRef.current = false;
       setError(err.message || 'Payment verification error. Please contact faizan.loyola@gmail.com.');
-    } finally {
       setLoading(false);
       setRazorpayData(null);
     }
   };
 
   const handlePaymentFailure = async (errorDetails?: any) => {
+    if (isPaymentProcessingRef.current) return;
+
     if (razorpayData?.orderId) {
       try {
         await fetch('/api/checkout/cancel-attempt', {
@@ -218,6 +228,8 @@ export default function CheckoutPage() {
   };
 
   const handlePaymentClose = async () => {
+    if (isPaymentProcessingRef.current) return;
+
     if (razorpayData?.orderId) {
       try {
         await fetch('/api/checkout/cancel-attempt', {
