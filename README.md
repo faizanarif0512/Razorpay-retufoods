@@ -252,7 +252,7 @@ Guest-only checkout has been replaced with **mandatory permanent customer accoun
 
 - **URL:** `http://localhost:3000/admin`
 - **Default Login Email:** `admin@retufoods.com`
-- **Default Password:** `ChangeMeInProduction2026!`
+- **Default Password:** Set via `ADMIN_INITIAL_PASSWORD` in `.env.local`
 - **Features:**
   - Gross sales and reconciled paid revenue metrics.
   - Active stock inventory manager with low-stock alerts.

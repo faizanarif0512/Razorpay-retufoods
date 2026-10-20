@@ -114,13 +114,6 @@ export default function AdminLoginPage() {
           </button>
         </form>
 
-        <div className="pt-4 border-t border-retu-border text-center text-[11px] text-gray-400">
-          <p>Default credentials (local setup):</p>
-          <code className="bg-gray-100 px-2 py-0.5 rounded text-gray-700 mt-1 inline-block">
-            admin@retufoods.com / ChangeMeInProduction2026!
-          </code>
-        </div>
-
       </div>
     </div>
   );

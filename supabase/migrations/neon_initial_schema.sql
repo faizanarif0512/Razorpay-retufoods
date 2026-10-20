@@ -233,7 +233,7 @@ CREATE INDEX idx_refunds_order ON refunds(order_id);
 -- INITIAL SEED DATA
 -- ==============================================================================
 
--- 1. Default Super Admin (admin@retufoods.com / ChangeMeInProduction2026!)
+-- 1. Default Super Admin (admin@retufoods.com)
 INSERT INTO admin_users (id, email, password_hash, password_salt, role, name, is_active, created_at)
 VALUES (
     'admin_super_01',
