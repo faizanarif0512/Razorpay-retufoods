@@ -1,4 +1,5 @@
 import { getDb, hashPassword, verifyPassword } from './index.ts';
+import { persistOrderToNeon, persistCustomerToNeon, updateOrderPaymentInNeon } from './neon.ts';
 import crypto from 'crypto';
 
 export interface ProductVariant {
@@ -441,6 +442,10 @@ export function createOrderWithReservation(input: CreateOrderInput): { order: Or
   const order = getOrderById(orderId);
   if (!order) throw new Error('Order creation failed to retrieve saved record');
 
+  persistOrderToNeon(order, order.items || []).catch((e) => {
+    console.warn('[NEON SAVE ORDER NOTICE]:', e?.message || e);
+  });
+
   return { order, razorpayAmountPaise: validation.total_paise };
 }
 
@@ -575,7 +580,11 @@ export function createCustomer(data: {
     now
   );
 
-  return getCustomerById(customerId)!;
+  const customer = getCustomerById(customerId)!;
+  persistCustomerToNeon(customer, hash, salt).catch((e) => {
+    console.warn('[NEON SAVE CUSTOMER NOTICE]:', e?.message || e);
+  });
+  return customer;
 }
 
 export function authenticateCustomer(email: string, password: string): Customer | null {
@@ -683,6 +692,10 @@ export function markOrderPaid(
 
   // Automatically generate tax invoice upon confirmed payment
   generateInvoiceRecord(orderId);
+
+  updateOrderPaymentInNeon(orderId, razorpayPaymentId, razorpaySignature).catch((e) => {
+    console.warn('[NEON UPDATE PAYMENT NOTICE]:', e?.message || e);
+  });
 
   const updated = getOrderById(orderId);
   if (!updated) throw new Error('Order not found after update');

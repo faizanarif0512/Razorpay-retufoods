@@ -1,8 +1,10 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import crypto from 'crypto';
 
 import { DatabaseSync } from 'node:sqlite';
+import { syncNeonToLocal, isNeonConfigured } from './neon.ts';
 
 let dbInstance: any = null;
 
@@ -20,23 +22,57 @@ export function verifyPassword(password: string, hash: string, salt: string): bo
   return crypto.timingSafeEqual(Buffer.from(calculated, 'hex'), Buffer.from(hash, 'hex'));
 }
 
+function resolveDatabasePath(): string {
+  if (process.env.SQLITE_DB_PATH) {
+    return path.resolve(process.cwd(), process.env.SQLITE_DB_PATH);
+  }
+
+  // Detect serverless environment (Netlify, AWS Lambda, Vercel)
+  const isServerless = Boolean(
+    process.env.NETLIFY ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.LAMBDA_TASK_ROOT ||
+    process.env.VERCEL
+  );
+
+  if (isServerless) {
+    return path.join(os.tmpdir(), 'retufoods.db');
+  }
+
+  return DB_PATH;
+}
+
 export function getDb() {
   if (dbInstance) return dbInstance;
 
-  const targetPath = process.env.SQLITE_DB_PATH
-    ? path.resolve(process.cwd(), process.env.SQLITE_DB_PATH)
-    : DB_PATH;
+  let targetPath = resolveDatabasePath();
+  let targetDir = path.dirname(targetPath);
 
-  const targetDir = path.dirname(targetPath);
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true });
+  try {
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+  } catch (dirErr) {
+    console.warn('[DB] Cannot create directory at', targetDir, 'falling back to os.tmpdir():', dirErr);
+    targetPath = path.join(os.tmpdir(), 'retufoods.db');
   }
 
-  const db = new DatabaseSync(targetPath);
+  let db: any;
+  try {
+    db = new DatabaseSync(targetPath);
+  } catch (openErr) {
+    console.warn('[DB] Failed opening db at', targetPath, 'falling back to os.tmpdir():', openErr);
+    targetPath = path.join(os.tmpdir(), 'retufoods.db');
+    db = new DatabaseSync(targetPath);
+  }
   
   // Pragmas for performance and data integrity
-  db.exec('PRAGMA foreign_keys = ON;');
-  db.exec('PRAGMA journal_mode = WAL;');
+  try {
+    db.exec('PRAGMA foreign_keys = ON;');
+    db.exec('PRAGMA journal_mode = WAL;');
+  } catch (pragmaErr) {
+    console.warn('[DB] SQLite WAL pragma skipped in serverless environment:', pragmaErr);
+  }
 
   // Schema creation
   db.exec(`
@@ -258,6 +294,12 @@ export function getDb() {
   } catch (_) {}
 
   seedInitialData(db);
+
+  if (isNeonConfigured()) {
+    syncNeonToLocal(db).catch((err) => {
+      console.warn('[NEON SYNC NOTICE]:', err.message);
+    });
+  }
 
   dbInstance = db;
   return db;
