@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const products = getAllProducts(true);
+    const products = await getAllProducts(true);
     return NextResponse.json({ success: true, products });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
@@ -27,9 +27,9 @@ export async function PATCH(req: NextRequest) {
     const { type, id, data } = body;
 
     if (type === 'product') {
-      updateProduct(id, data);
+      await updateProduct(id, data);
     } else if (type === 'variant') {
-      updateVariant(id, data);
+      await updateVariant(id, data);
     } else {
       return NextResponse.json({ success: false, error: 'Invalid update type' }, { status: 400 });
     }

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Valid email required' }, { status: 400 });
     }
 
-    const orders = getOrdersByCustomerEmail(email.trim());
+    const orders = await getOrdersByCustomerEmail(email.trim());
     return NextResponse.json({ success: true, orders });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

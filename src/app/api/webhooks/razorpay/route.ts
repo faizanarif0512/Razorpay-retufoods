@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Record webhook event in DB
-    recordWebhookEvent(eventId, eventType, event);
+    await recordWebhookEvent(eventId, eventType, event);
 
     // Process event
     if (eventType === 'payment.captured' || eventType === 'order.paid') {
@@ -49,10 +49,10 @@ export async function POST(req: NextRequest) {
       const razorpayPaymentId = paymentEntity?.id;
 
       if (razorpayOrderId) {
-        const internalOrder = getOrderByRazorpayOrderId(razorpayOrderId);
+        const internalOrder = await getOrderByRazorpayOrderId(razorpayOrderId);
         if (internalOrder && internalOrder.payment_status !== 'paid') {
-          const updated = markOrderPaid(internalOrder.id, razorpayPaymentId || 'webhook_captured');
-          const invoice = getInvoiceByOrderId(internalOrder.id);
+          const updated = await markOrderPaid(internalOrder.id, razorpayPaymentId || 'webhook_captured');
+          const invoice = await getInvoiceByOrderId(internalOrder.id);
           sendOrderPaidEmails(updated, invoice?.invoice_number || 'INV-PENDING').catch(console.error);
         }
       }
@@ -63,9 +63,9 @@ export async function POST(req: NextRequest) {
       const errorDescription = paymentEntity?.error_description;
 
       if (razorpayOrderId) {
-        const internalOrder = getOrderByRazorpayOrderId(razorpayOrderId);
+        const internalOrder = await getOrderByRazorpayOrderId(razorpayOrderId);
         if (internalOrder && internalOrder.payment_status !== 'paid') {
-          markOrderPaymentFailed(internalOrder.id, errorCode, errorDescription);
+          await markOrderPaymentFailed(internalOrder.id, errorCode, errorDescription);
         }
       }
     } else if (
@@ -81,11 +81,11 @@ export async function POST(req: NextRequest) {
       const notes = refundEntity?.notes || paymentEntity?.notes;
 
       if (razorpayPaymentId) {
-        const internalOrder = getOrderByRazorpayPaymentId(razorpayPaymentId);
+        const internalOrder = await getOrderByRazorpayPaymentId(razorpayPaymentId);
         if (internalOrder) {
-          const existing = razorpayRefundId ? getRefundByRazorpayRefundId(razorpayRefundId) : null;
+          const existing = razorpayRefundId ? await getRefundByRazorpayRefundId(razorpayRefundId) : null;
           if (!existing) {
-            const refund = createOrderRefund({
+            const refund = await createOrderRefund({
               orderId: internalOrder.id,
               razorpayRefundId: razorpayRefundId || `rfnd_hook_${eventId}`,
               razorpayPaymentId,
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    markWebhookProcessed(eventId);
+    await markWebhookProcessed(eventId);
     return NextResponse.json({ status: 'ok' });
   } catch (err: any) {
     console.error('Webhook error:', err);

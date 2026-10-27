@@ -11,12 +11,12 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Order reference required' }, { status: 400 });
     }
 
-    const order = getOrderByReference(orderReference);
+    const order = await getOrderByReference(orderReference);
     if (!order) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
 
-    const invoice = getInvoiceByOrderId(order.id);
+    const invoice = await getInvoiceByOrderId(order.id);
 
     return NextResponse.json({
       success: true,

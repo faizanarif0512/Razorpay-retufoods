@@ -4,12 +4,12 @@ import { getOrdersByCustomerId } from '@/lib/db/service';
 
 export async function GET(req: NextRequest) {
   try {
-    const customer = getCustomerFromRequest(req);
+    const customer = await getCustomerFromRequest(req);
     if (!customer) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const orders = getOrdersByCustomerId(customer.id);
+    const orders = await getOrdersByCustomerId(customer.id);
     return NextResponse.json({
       success: true,
       orders,

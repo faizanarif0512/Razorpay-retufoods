@@ -20,9 +20,9 @@ export default async function AdminPage() {
     redirect('/admin/login');
   }
 
-  const stats = getAdminStats();
-  const orders = getAllOrdersAdmin();
-  const products = getAllProducts(true);
+  const stats = await getAdminStats();
+  const orders = await getAllOrdersAdmin();
+  const products = await getAllProducts(true);
 
   return (
     <AdminDashboardClient

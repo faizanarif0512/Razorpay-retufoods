@@ -5,7 +5,7 @@ import CatalogueClient from '@/components/products/CatalogueClient';
 export const dynamic = 'force-dynamic';
 
 export default async function ProductsPage() {
-  const products = getAllProducts(false);
+  const products = await getAllProducts(false);
 
   return (
     <div className="bg-white min-h-[80vh]">

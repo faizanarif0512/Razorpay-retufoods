@@ -48,20 +48,20 @@ export async function getAuthenticatedCustomer(): Promise<Customer | null> {
     const customerId = verifyCustomerToken(token);
     if (!customerId) return null;
 
-    return getCustomerById(customerId);
+    return await getCustomerById(customerId);
   } catch (err) {
     return null;
   }
 }
 
-export function getCustomerFromRequest(req: NextRequest): Customer | null {
+export async function getCustomerFromRequest(req: NextRequest): Promise<Customer | null> {
   const token = req.cookies.get(COOKIE_NAME)?.value;
   if (!token) return null;
 
   const customerId = verifyCustomerToken(token);
   if (!customerId) return null;
 
-  return getCustomerById(customerId);
+  return await getCustomerById(customerId);
 }
 
 export { COOKIE_NAME, SESSION_MAX_AGE_SECONDS };

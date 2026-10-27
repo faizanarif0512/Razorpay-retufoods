@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Password must be at least 6 characters long' }, { status: 400 });
     }
 
-    const customer = createCustomer({
+    const customer = await createCustomer({
       name,
       email,
       phone,

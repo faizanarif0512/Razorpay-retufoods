@@ -11,13 +11,13 @@ export default async function ProductDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     notFound();
   }
 
-  const allProducts = getAllProducts(false);
+  const allProducts = await getAllProducts(false);
   const relatedProducts = allProducts.filter((p) => p.id !== product.id).slice(0, 2);
 
   return (

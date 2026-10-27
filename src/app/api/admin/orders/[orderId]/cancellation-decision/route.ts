@@ -31,7 +31,7 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Action must be approve or reject' }, { status: 400 });
     }
 
-    const order = getOrderById(orderId);
+    const order = await getOrderById(orderId);
     if (!order) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
@@ -46,7 +46,7 @@ export async function POST(
     // --- REJECT PATH ---
     if (action === 'reject') {
       const rejectionReason = reason || 'Order has already been prepared for cold-chain transit and cannot be cancelled.';
-      const updated = rejectOrderCancellation(orderId, rejectionReason, admin.email);
+      const updated = await rejectOrderCancellation(orderId, rejectionReason, admin.email);
 
       try {
         await sendCustomerCancellationRejectedEmail(updated, rejectionReason);
@@ -98,7 +98,7 @@ export async function POST(
       }
 
       // 2. Record refund and update order state to refunded and cancelled
-      const refund = createOrderRefund({
+      const refund = await createOrderRefund({
         orderId: order.id,
         razorpayRefundId: refundResult.refundId,
         razorpayPaymentId: order.razorpay_payment_id,
@@ -116,7 +116,7 @@ export async function POST(
         console.error('[EMAIL ERROR ON APPROVED REFUND]:', emailErr);
       }
 
-      const updated = getOrderById(order.id);
+      const updated = await getOrderById(order.id);
       return NextResponse.json({
         success: true,
         message: `Cancellation approved! Refund of ₹${(targetAmountPaise / 100).toFixed(2)} processed via Razorpay.${shouldRestock ? ' Inventory stock restored.' : ''}`,
@@ -125,7 +125,7 @@ export async function POST(
       });
     } else {
       // Order was unpaid or pending: simply cancel order and restock
-      const updated = adminCancelOrder(orderId, {
+      const updated = await adminCancelOrder(orderId, {
         reason: approvalReason,
         restock: shouldRestock,
         adminEmail: admin.email,

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Order ID required' }, { status: 400 });
     }
 
-    const order = getOrderById(orderId);
+    const order = await getOrderById(orderId);
     if (!order) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: 'Order is already paid' });
     }
 
-    const updated = markOrderPaymentFailed(
+    const updated = await markOrderPaymentFailed(
       orderId,
       errorCode || 'CHECKOUT_ABANDONED',
       reason || 'Customer closed Razorpay popup or payment was declined'

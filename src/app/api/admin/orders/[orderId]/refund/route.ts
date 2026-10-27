@@ -18,7 +18,7 @@ export async function POST(
     const body = await req.json().catch(() => ({}));
     const { amountPaise, reason, restock } = body;
 
-    const order = getOrderById(orderId);
+    const order = await getOrderById(orderId);
     if (!order) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
@@ -31,7 +31,7 @@ export async function POST(
     }
 
     // Determine refund amount
-    const existingRefunds = getRefundsByOrderId(orderId);
+    const existingRefunds = await getRefundsByOrderId(orderId);
     const alreadyRefundedPaise = existingRefunds
       .filter((r) => r.status === 'processed')
       .reduce((sum, r) => sum + r.amount_paise, 0);
@@ -83,7 +83,7 @@ export async function POST(
     }
 
     // 2. Record refund and update order state in database
-    const refund = createOrderRefund({
+    const refund = await createOrderRefund({
       orderId: order.id,
       razorpayRefundId: refundResult.refundId,
       razorpayPaymentId: order.razorpay_payment_id,

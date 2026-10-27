@@ -109,7 +109,7 @@ export async function sendOrderPaidEmails(order: Order, invoiceNumber: string): 
   const totalInr = (order.total_paise / 100).toFixed(2);
 
   // Generate official Tax Invoice PDF attachment
-  const invoice = getInvoiceByOrderId(order.id);
+  const invoice = await getInvoiceByOrderId(order.id);
   let pdfAttachment: EmailAttachment | undefined;
 
   if (invoice) {

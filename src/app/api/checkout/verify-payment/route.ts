@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const order = getOrderById(orderId);
+    const order = await getOrderById(orderId);
     if (!order) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Update order status to PAID and trigger invoice generation
-    const updatedOrder = markOrderPaid(order.id, razorpayPaymentId, razorpaySignature);
-    const invoice = getInvoiceByOrderId(order.id);
+    const updatedOrder = await markOrderPaid(order.id, razorpayPaymentId, razorpaySignature);
+    const invoice = await getInvoiceByOrderId(order.id);
 
     // Send confirmation emails in background
     sendOrderPaidEmails(updatedOrder, invoice?.invoice_number || 'INV-PENDING').catch((err) => {

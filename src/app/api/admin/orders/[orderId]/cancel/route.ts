@@ -26,7 +26,7 @@ export async function POST(
     const body = await req.json().catch(() => ({}));
     const { reason, restock } = body;
 
-    const order = getOrderById(orderId);
+    const order = await getOrderById(orderId);
     if (!order) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
@@ -52,7 +52,7 @@ export async function POST(
         );
       }
 
-      const existingRefunds = getRefundsByOrderId(orderId);
+      const existingRefunds = await getRefundsByOrderId(orderId);
       const alreadyRefundedPaise = existingRefunds
         .filter((r) => r.status === 'processed')
         .reduce((sum, r) => sum + r.amount_paise, 0);
@@ -82,7 +82,7 @@ export async function POST(
         }
 
         // 2. Record refund and update order state to refunded and cancelled
-        const refund = createOrderRefund({
+        const refund = await createOrderRefund({
           orderId: order.id,
           razorpayRefundId: refundResult.refundId,
           razorpayPaymentId: order.razorpay_payment_id,
@@ -94,7 +94,7 @@ export async function POST(
         });
 
         // 3. Ensure fulfilment status is marked cancelled in orders table
-        const updated = adminCancelOrder(orderId, {
+        const updated = await adminCancelOrder(orderId, {
           reason: cancellationReason,
           restock: false, // Stock was already restored by createOrderRefund if restock=true
           adminEmail: admin.email,
@@ -117,7 +117,7 @@ export async function POST(
     }
 
     // Non-prepaid or already fully refunded: cancel order and restore stock if requested
-    const updated = adminCancelOrder(orderId, {
+    const updated = await adminCancelOrder(orderId, {
       reason: cancellationReason,
       restock: shouldRestock,
       adminEmail: admin.email,

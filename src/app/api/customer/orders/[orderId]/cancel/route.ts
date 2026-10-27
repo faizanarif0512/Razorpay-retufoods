@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const customer = getCustomerFromRequest(req);
+    const customer = await getCustomerFromRequest(req);
     if (!customer) {
       return NextResponse.json(
         { success: false, error: 'Authentication required. Please sign in to your customer account.' },
@@ -20,7 +20,7 @@ export async function POST(
     const body = await req.json().catch(() => ({}));
     const reason = body.reason || 'Customer requested pre-dispatch cancellation';
 
-    const order = getOrderById(orderId);
+    const order = await getOrderById(orderId);
     if (!order) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
@@ -72,7 +72,7 @@ export async function POST(
     }
 
     // 1. Record cancellation request in database (Intimation before admin review)
-    const updatedOrder = requestOrderCancellation(order.id, reason);
+    const updatedOrder = await requestOrderCancellation(order.id, reason);
 
     // 2. Send intimation email to customer and alert email to admin
     try {

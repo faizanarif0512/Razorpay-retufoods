@@ -296,13 +296,28 @@ export function getDb() {
   seedInitialData(db);
 
   if (isNeonConfigured()) {
-    syncNeonToLocal(db).catch((err) => {
-      console.warn('[NEON SYNC NOTICE]:', err.message);
-    });
+    if (!syncPromise) {
+      syncPromise = syncNeonToLocal(db).catch((err) => {
+        console.warn('[NEON SYNC NOTICE]:', err.message);
+      });
+    }
   }
 
   dbInstance = db;
   return db;
+}
+
+let syncPromise: Promise<void> | null = null;
+
+export async function ensureNeonSynced(): Promise<void> {
+  const db = getDb();
+  if (!isNeonConfigured()) return;
+  if (!syncPromise) {
+    syncPromise = syncNeonToLocal(db).catch((err) => {
+      console.warn('[NEON SYNC NOTICE]:', err.message);
+    });
+  }
+  await syncPromise;
 }
 
 function seedInitialData(db: any) {

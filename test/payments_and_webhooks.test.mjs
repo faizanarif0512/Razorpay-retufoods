@@ -108,26 +108,26 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
     );
   });
 
-  await t.test('Should handle webhook events idempotently and prevent duplicate processing', () => {
+  await t.test('Should handle webhook events idempotently and prevent duplicate processing', async () => {
     const eventId = `evt_dedup_${Date.now()}`;
     assert.strictEqual(isWebhookProcessed(eventId), false);
 
-    recordWebhookEvent(eventId, 'payment.captured', { test: true });
-    markWebhookProcessed(eventId);
+    await recordWebhookEvent(eventId, 'payment.captured', { test: true });
+    await markWebhookProcessed(eventId);
 
     // After processing, must be recognized as processed
     assert.strictEqual(isWebhookProcessed(eventId), true);
 
     // Duplicate event recording must not throw
-    recordWebhookEvent(eventId, 'payment.captured', { test: true });
+    await recordWebhookEvent(eventId, 'payment.captured', { test: true });
     assert.strictEqual(isWebhookProcessed(eventId), true);
   });
 
-  await t.test('Should enforce customer order separation by email', () => {
+  await t.test('Should enforce customer order separation by email', async () => {
     const emailA = `cust_a_${Date.now()}@example.com`;
     const emailB = `cust_b_${Date.now()}@example.com`;
 
-    createOrderWithReservation({
+    await createOrderWithReservation({
       customer_name: 'Customer A',
       customer_email: emailA,
       customer_phone: '9999999991',
@@ -138,8 +138,8 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
       items: [{ variant_id: 'var_mango_6p', quantity: 1 }],
     });
 
-    const ordersA = getOrdersByCustomerEmail(emailA);
-    const ordersB = getOrdersByCustomerEmail(emailB);
+    const ordersA = await getOrdersByCustomerEmail(emailA);
+    const ordersB = await getOrdersByCustomerEmail(emailB);
 
     assert.strictEqual(ordersA.length, 1);
     assert.strictEqual(ordersB.length, 0, 'Customer B must not see Customer A orders');
@@ -210,9 +210,9 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
     assert.strictEqual(pdfBuffer.slice(0, 4).toString('utf-8'), '%PDF', 'PDF buffer must start with %PDF magic header');
   });
 
-  await t.test('Should execute order refund atomically, restock inventory, and update order status', () => {
+  await t.test('Should execute order refund atomically, restock inventory, and update order status', async () => {
     // 1. Create paid order with reserved variant
-    const { order } = createOrderWithReservation({
+    const { order } = await createOrderWithReservation({
       customer_name: 'Refund Test Customer',
       customer_email: `refund_${Date.now()}@example.com`,
       customer_phone: '9876543210',
@@ -223,14 +223,14 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
       items: [{ variant_id: 'var_mango_6p', quantity: 2 }],
     });
 
-    const initialVariant = getVariantById('var_mango_6p');
+    const initialVariant = await getVariantById('var_mango_6p');
     const initialStock = initialVariant.stock_quantity;
 
-    attachRazorpayOrderId(order.id, 'order_rzp_mock_123');
-    markOrderPaid(order.id, 'pay_rzp_mock_123');
+    await attachRazorpayOrderId(order.id, 'order_rzp_mock_123');
+    await markOrderPaid(order.id, 'pay_rzp_mock_123');
 
     // 2. Issue full refund with restock = true
-    const refund = createOrderRefund({
+    const refund = await createOrderRefund({
       orderId: order.id,
       razorpayRefundId: 'rfnd_test_999',
       razorpayPaymentId: 'pay_rzp_mock_123',
@@ -247,12 +247,12 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
     assert.strictEqual(refund.restocked, 1);
 
     // 3. Verify order was transitioned to refunded and cancelled
-    const updatedOrder = getOrderById(order.id);
+    const updatedOrder = await getOrderById(order.id);
     assert.strictEqual(updatedOrder.payment_status, 'refunded');
     assert.strictEqual(updatedOrder.fulfilment_status, 'cancelled');
 
     // 4. Verify inventory was restored
-    const restockedVariant = getVariantById('var_mango_6p');
+    const restockedVariant = await getVariantById('var_mango_6p');
     assert.strictEqual(
       restockedVariant.stock_quantity,
       initialStock + 2,
@@ -260,7 +260,7 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
     );
 
     // 5. Verify refund is linked to order
-    const refunds = getRefundsByOrderId(order.id);
+    const refunds = await getRefundsByOrderId(order.id);
     assert.strictEqual(refunds.length, 1);
     assert.strictEqual(refunds[0].razorpay_refund_id, 'rfnd_test_999');
   });
@@ -276,12 +276,12 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
     assert.ok(res.refundId.startsWith('rfnd_'), 'Refund ID should follow Razorpay format');
   });
 
-  await t.test('Should restore inventory stock when payment fails or is abandoned', () => {
-    const initialVariant = getVariantById('var_mango_6p');
+  await t.test('Should restore inventory stock when payment fails or is abandoned', async () => {
+    const initialVariant = await getVariantById('var_mango_6p');
     const initialStock = initialVariant.stock_quantity;
 
     // 1. Create order reserving 3 units
-    const { order } = createOrderWithReservation({
+    const { order } = await createOrderWithReservation({
       customer_name: 'Fail Test User',
       customer_email: `fail_${Date.now()}@retufoods.com`,
       customer_phone: '9876543210',
@@ -293,29 +293,29 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
     });
 
     // Verify stock was deducted upon reservation
-    const reservedVariant = getVariantById('var_mango_6p');
+    const reservedVariant = await getVariantById('var_mango_6p');
     assert.strictEqual(reservedVariant.stock_quantity, initialStock - 3);
 
     // 2. Mark order payment as failed / dismissed
-    const failedOrder = markOrderPaymentFailed(order.id, 'BAD_REQUEST', 'Customer dismissed modal');
+    const failedOrder = await markOrderPaymentFailed(order.id, 'BAD_REQUEST', 'Customer dismissed modal');
     assert.ok(failedOrder);
     assert.strictEqual(failedOrder.payment_status, 'failed');
     assert.strictEqual(failedOrder.fulfilment_status, 'cancelled');
     assert.strictEqual(failedOrder.stock_restored, 1);
 
     // 3. Verify stock is restored
-    const restoredVariant = getVariantById('var_mango_6p');
+    const restoredVariant = await getVariantById('var_mango_6p');
     assert.strictEqual(restoredVariant.stock_quantity, initialStock, 'Stock must be fully restored upon payment failure');
 
     // 4. Calling markOrderPaymentFailed a second time must NOT double-restock
-    markOrderPaymentFailed(order.id, 'REPEAT_FAILURE', 'Second check');
-    const idempotentVariant = getVariantById('var_mango_6p');
+    await markOrderPaymentFailed(order.id, 'REPEAT_FAILURE', 'Second check');
+    const idempotentVariant = await getVariantById('var_mango_6p');
     assert.strictEqual(idempotentVariant.stock_quantity, initialStock, 'Stock must not be double-restocked');
   });
 
-  await t.test('Should support customer cancellation request and approval pipeline', () => {
+  await t.test('Should support customer cancellation request and approval pipeline', async () => {
     // 1. Create a paid order
-    const { order } = createOrderWithReservation({
+    const { order } = await createOrderWithReservation({
       customer_name: 'Pipeline Test',
       customer_email: `pipeline_${Date.now()}@retufoods.com`,
       customer_phone: '9876543210',
@@ -325,22 +325,22 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
       shipping_postal_code: '560001',
       items: [{ variant_id: 'var_mango_6p', quantity: 1 }],
     });
-    markOrderPaid(order.id, 'pay_pipe_test_123');
+    await markOrderPaid(order.id, 'pay_pipe_test_123');
 
     // 2. Customer requests cancellation
-    const requested = requestOrderCancellation(order.id, 'Ordered by mistake');
+    const requested = await requestOrderCancellation(order.id, 'Ordered by mistake');
     assert.strictEqual(requested.cancellation_status, 'requested');
     assert.strictEqual(requested.cancellation_reason, 'Ordered by mistake');
     assert.strictEqual(requested.payment_status, 'paid', 'Payment status remains paid until admin approves');
 
     // 3. Admin rejects cancellation (e.g. cold-chain transit already started)
-    const rejected = rejectOrderCancellation(order.id, 'Package already with refrigerated courier', 'admin@retufoods.com');
+    const rejected = await rejectOrderCancellation(order.id, 'Package already with refrigerated courier', 'admin@retufoods.com');
     assert.strictEqual(rejected.cancellation_status, 'rejected');
     assert.strictEqual(rejected.cancellation_admin_notes, 'Package already with refrigerated courier');
     assert.strictEqual(rejected.fulfilment_status, 'confirmed', 'Order remains active for delivery');
 
     // 4. Admin direct cancellation on another order
-    const adminCancel = adminCancelOrder(order.id, {
+    const adminCancel = await adminCancelOrder(order.id, {
       reason: 'Admin cancelled order manually',
       restock: true,
       adminEmail: 'admin@retufoods.com',
@@ -351,7 +351,7 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
 
   await t.test('Should automatically generate refund and restore stock on admin cancellation of prepaid order', async () => {
     // 1. Create a prepaid order
-    const { order } = createOrderWithReservation({
+    const { order } = await createOrderWithReservation({
       customer_name: 'Prepaid Admin Cancel Test',
       customer_email: `admin_cancel_${Date.now()}@retufoods.com`,
       customer_phone: '9876543210',
@@ -362,10 +362,10 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
       items: [{ variant_id: 'var_mango_6p', quantity: 1 }],
     });
 
-    const initialStock = getVariantById('var_mango_6p').stock_quantity;
+    const initialStock = (await getVariantById('var_mango_6p')).stock_quantity;
     const paymentId = 'pay_admin_cancel_test_123';
-    attachRazorpayOrderId(order.id, 'order_rzp_cancel_test_123');
-    markOrderPaid(order.id, paymentId);
+    await attachRazorpayOrderId(order.id, 'order_rzp_cancel_test_123');
+    await markOrderPaid(order.id, paymentId);
 
     // 2. Simulate admin cancelling prepaid order with automated refund
     const refundRes = await createRazorpayRefund({
@@ -375,7 +375,7 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
     });
     assert.ok(refundRes.success);
 
-    const refund = createOrderRefund({
+    const refund = await createOrderRefund({
       orderId: order.id,
       razorpayRefundId: refundRes.refundId,
       razorpayPaymentId: paymentId,
@@ -386,7 +386,7 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
       notes: 'Admin cancelled order with automated refund',
     });
 
-    const cancelledOrder = adminCancelOrder(order.id, {
+    const cancelledOrder = await adminCancelOrder(order.id, {
       reason: 'Out of stock at local depot',
       restock: false,
       adminEmail: 'admin@retufoods.com',
@@ -398,13 +398,12 @@ test('Payment, Webhooks, Idempotency and Security tests', async (t) => {
     assert.strictEqual(cancelledOrder.cancellation_status, 'approved');
 
     // 4. Verify inventory was restored back
-    const finalStock = getVariantById('var_mango_6p').stock_quantity;
+    const finalStock = (await getVariantById('var_mango_6p')).stock_quantity;
     assert.strictEqual(finalStock, initialStock + 1);
 
     // 5. Verify refund record is persisted
-    const recordedRefunds = getRefundsByOrderId(order.id);
+    const recordedRefunds = await getRefundsByOrderId(order.id);
     assert.strictEqual(recordedRefunds.length, 1);
     assert.strictEqual(recordedRefunds[0].amount_paise, order.total_paise);
   });
 });
-

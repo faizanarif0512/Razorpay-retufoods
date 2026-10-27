@@ -1,5 +1,30 @@
 import { getDb, hashPassword, verifyPassword } from './index.ts';
-import { persistOrderToNeon, persistCustomerToNeon, updateOrderPaymentInNeon } from './neon.ts';
+import {
+  isNeonConfigured,
+  persistOrderToNeon,
+  persistCustomerToNeon,
+  updateCustomerProfileInNeon,
+  updateOrderPaymentInNeon,
+  updateOrderPaymentFailedInNeon,
+  attachRazorpayOrderIdToNeon,
+  persistInvoiceToNeon,
+  updateProductInNeon,
+  updateVariantInNeon,
+  updateOrderFulfilmentInNeon,
+  updateOrderCancellationInNeon,
+  persistRefundToNeon,
+  recordWebhookEventInNeon,
+  markWebhookProcessedInNeon,
+  fetchOrderFromNeonById,
+  fetchOrderFromNeonByReference,
+  fetchOrderFromNeonByRazorpayOrderId,
+  fetchOrdersFromNeonByCustomerId,
+  fetchCustomerFromNeonByEmail,
+  fetchCustomerFromNeonById,
+  fetchInvoiceFromNeonByOrderId,
+  fetchAllOrdersFromNeon,
+  fetchAdminStatsFromNeon,
+} from './neon.ts';
 import crypto from 'crypto';
 
 export interface ProductVariant {
@@ -153,14 +178,134 @@ export function generateOrderReference(): string {
   return `RETU-${yearSuffix}-${rand}`;
 }
 
-// Helper to convert node:sqlite [Object: null prototype] to plain objects for Next.js Server Components
 export function toPlain<T>(obj: T): T {
   if (!obj) return obj;
   return JSON.parse(JSON.stringify(obj));
 }
 
+function cacheNeonOrderToSqlite(o: any) {
+  if (!o) return;
+  try {
+    const db = getDb();
+    db.prepare(`
+      INSERT INTO orders (
+        id, order_reference, customer_id, customer_name, customer_email, customer_phone,
+        shipping_address_line1, shipping_address_line2, shipping_city, shipping_state,
+        shipping_postal_code, shipping_country, subtotal_paise, discount_paise, tax_paise,
+        shipping_paise, total_paise, currency, payment_status, fulfilment_status,
+        razorpay_order_id, razorpay_payment_id, razorpay_signature, notes,
+        tracking_carrier, tracking_number, cancellation_status, cancellation_reason,
+        cancellation_requested_at, cancellation_admin_notes, stock_restored,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT (id) DO UPDATE SET
+        payment_status = excluded.payment_status,
+        fulfilment_status = excluded.fulfilment_status,
+        razorpay_order_id = excluded.razorpay_order_id,
+        razorpay_payment_id = excluded.razorpay_payment_id,
+        razorpay_signature = excluded.razorpay_signature,
+        cancellation_status = excluded.cancellation_status,
+        updated_at = excluded.updated_at
+    `).run(
+      o.id, o.order_reference, o.customer_id || null, o.customer_name,
+      o.customer_email, o.customer_phone, o.shipping_address_line1,
+      o.shipping_address_line2 || null, o.shipping_city, o.shipping_state,
+      o.shipping_postal_code, o.shipping_country || 'India', o.subtotal_paise,
+      o.discount_paise || 0, o.tax_paise || 0, o.shipping_paise || 0,
+      o.total_paise, o.currency || 'INR', o.payment_status || 'pending',
+      o.fulfilment_status || 'pending', o.razorpay_order_id || null,
+      o.razorpay_payment_id || null, o.razorpay_signature || null, o.notes || null,
+      o.tracking_carrier || null, o.tracking_number || null,
+      o.cancellation_status || null, o.cancellation_reason || null,
+      o.cancellation_requested_at ? new Date(o.cancellation_requested_at).toISOString() : null,
+      o.cancellation_admin_notes || null, o.stock_restored ? 1 : 0,
+      o.created_at ? new Date(o.created_at).toISOString() : new Date().toISOString(),
+      o.updated_at ? new Date(o.updated_at).toISOString() : new Date().toISOString()
+    );
+
+    if (o.items && Array.isArray(o.items)) {
+      const insItem = db.prepare(`
+        INSERT INTO order_items (
+          id, order_id, product_id, variant_id, product_name, variant_name, sku,
+          quantity, unit_price_paise, total_price_paise, image_url, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (id) DO NOTHING
+      `);
+      for (const it of o.items) {
+        insItem.run(
+          it.id, it.order_id, it.product_id, it.variant_id, it.product_name,
+          it.variant_name, it.sku, it.quantity, it.unit_price_paise,
+          it.total_price_paise, it.image_url || null,
+          it.created_at ? new Date(it.created_at).toISOString() : new Date().toISOString()
+        );
+      }
+    }
+  } catch (err) {
+    // Ignore cache error
+  }
+}
+
+function cacheNeonCustomerToSqlite(c: any) {
+  if (!c) return;
+  try {
+    const db = getDb();
+    db.prepare(`
+      INSERT INTO customers (
+        id, email, password_hash, password_salt, name, phone,
+        address_line1, address_line2, city, state, postal_code, country,
+        is_active, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT (id) DO UPDATE SET
+        password_hash = excluded.password_hash,
+        password_salt = excluded.password_salt,
+        name = excluded.name,
+        phone = excluded.phone,
+        address_line1 = excluded.address_line1,
+        address_line2 = excluded.address_line2,
+        city = excluded.city,
+        state = excluded.state,
+        postal_code = excluded.postal_code,
+        country = excluded.country,
+        updated_at = excluded.updated_at
+    `).run(
+      c.id, c.email, c.password_hash, c.password_salt, c.name, c.phone,
+      c.address_line1 || null, c.address_line2 || null, c.city || null,
+      c.state || null, c.postal_code || null, c.country || 'India',
+      c.is_active ? 1 : 0,
+      c.created_at ? new Date(c.created_at).toISOString() : new Date().toISOString(),
+      c.updated_at ? new Date(c.updated_at).toISOString() : new Date().toISOString()
+    );
+  } catch (err) {
+    // Ignore cache error
+  }
+}
+
+function cacheNeonInvoiceToSqlite(inv: any) {
+  if (!inv) return;
+  try {
+    const db = getDb();
+    db.prepare(`
+      INSERT INTO invoices (
+        id, order_id, invoice_number, invoice_date, company_name, company_address,
+        gstin, customer_name, customer_email, customer_address, subtotal_paise,
+        tax_paise, shipping_paise, total_paise, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT (id) DO NOTHING
+    `).run(
+      inv.id, inv.order_id, inv.invoice_number,
+      inv.invoice_date ? new Date(inv.invoice_date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+      inv.company_name, inv.company_address, inv.gstin || null,
+      inv.customer_name, inv.customer_email, inv.customer_address,
+      inv.subtotal_paise, inv.tax_paise, inv.shipping_paise, inv.total_paise,
+      inv.created_at ? new Date(inv.created_at).toISOString() : new Date().toISOString()
+    );
+  } catch (err) {
+    // Ignore cache error
+  }
+}
+
 // --- PRODUCT SERVICE ---
-export function getAllProducts(includeInactive = false): Product[] {
+export async function getAllProducts(includeInactive = false): Promise<Product[]> {
   const db = getDb();
   const query = includeInactive 
     ? 'SELECT * FROM products ORDER BY created_at ASC' 
@@ -183,7 +328,7 @@ export function getAllProducts(includeInactive = false): Product[] {
   return toPlain(products);
 }
 
-export function getProductBySlug(slug: string): Product | null {
+export async function getProductBySlug(slug: string): Promise<Product | null> {
   const db = getDb();
   const raw = db.prepare('SELECT * FROM products WHERE slug = ?').get(slug) as any;
   if (!raw) return null;
@@ -193,7 +338,7 @@ export function getProductBySlug(slug: string): Product | null {
   return toPlain(prod);
 }
 
-export function getProductById(id: string): Product | null {
+export async function getProductById(id: string): Promise<Product | null> {
   const db = getDb();
   const raw = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as any;
   if (!raw) return null;
@@ -203,7 +348,7 @@ export function getProductById(id: string): Product | null {
   return toPlain(prod);
 }
 
-export function updateProduct(id: string, data: Partial<Product>): void {
+export async function updateProduct(id: string, data: Partial<Product>): Promise<void> {
   const db = getDb();
   const fields: string[] = [];
   const values: any[] = [];
@@ -220,16 +365,20 @@ export function updateProduct(id: string, data: Partial<Product>): void {
   values.push(id);
 
   db.prepare(`UPDATE products SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+
+  if (isNeonConfigured()) {
+    await updateProductInNeon(id, data);
+  }
 }
 
-export function getVariantById(id: string): ProductVariant | null {
+export async function getVariantById(id: string): Promise<ProductVariant | null> {
   const db = getDb();
   const raw = db.prepare('SELECT * FROM product_variants WHERE id = ?').get(id) as any;
   if (!raw) return null;
   return toPlain({ ...raw });
 }
 
-export function updateVariant(id: string, data: Partial<ProductVariant>): void {
+export async function updateVariant(id: string, data: Partial<ProductVariant>): Promise<void> {
   const db = getDb();
   const fields: string[] = [];
   const values: any[] = [];
@@ -246,10 +395,13 @@ export function updateVariant(id: string, data: Partial<ProductVariant>): void {
   values.push(id);
 
   db.prepare(`UPDATE product_variants SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+
+  if (isNeonConfigured()) {
+    await updateVariantInNeon(id, data);
+  }
 }
 
 // --- SERVER-SIDE CART & PRICING VALIDATOR ---
-// Never trust client prices! Server retrieves active prices from database.
 export function validateCartItems(clientItems: { variant_id: string; quantity: number }[]): CartValidationResult {
   const db = getDb();
   const result: CartValidationResult = {
@@ -320,8 +472,6 @@ export function validateCartItems(clientItems: { variant_id: string; quantity: n
     result.shipping_paise = 9900;
   }
 
-  // In India, consumer food prices are MRP-inclusive of GST.
-  // We record tax as 0 additional extra (included in MRP)
   result.tax_paise = 0;
   result.total_paise = result.subtotal_paise + result.shipping_paise - result.discount_paise;
 
@@ -344,7 +494,7 @@ export interface CreateOrderInput {
   notes?: string;
 }
 
-export function createOrderWithReservation(input: CreateOrderInput): { order: Order; razorpayAmountPaise: number } {
+export async function createOrderWithReservation(input: CreateOrderInput): Promise<{ order: Order; razorpayAmountPaise: number }> {
   const db = getDb();
   const validation = validateCartItems(input.items);
 
@@ -356,10 +506,9 @@ export function createOrderWithReservation(input: CreateOrderInput): { order: Or
   const orderId = `ord_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
   const orderRef = generateOrderReference();
 
-  // Atomically decrement stock and persist order
+  // Atomically decrement stock and persist order in SQLite
   db.exec('BEGIN IMMEDIATE TRANSACTION;');
   try {
-    // 1. Decrement stock
     const decrementStock = db.prepare(`
       UPDATE product_variants
       SET stock_quantity = stock_quantity - ?, updated_at = ?
@@ -373,7 +522,6 @@ export function createOrderWithReservation(input: CreateOrderInput): { order: Or
       }
     }
 
-    // 2. Insert Order
     const insertOrder = db.prepare(`
       INSERT INTO orders (
         id, order_reference, customer_id, customer_name, customer_email, customer_phone,
@@ -407,7 +555,6 @@ export function createOrderWithReservation(input: CreateOrderInput): { order: Or
       now
     );
 
-    // 3. Insert Order Items (Immutable Snapshots)
     const insertItem = db.prepare(`
       INSERT INTO order_items (
         id, order_id, product_id, variant_id, product_name, variant_name,
@@ -439,17 +586,17 @@ export function createOrderWithReservation(input: CreateOrderInput): { order: Or
     throw err;
   }
 
-  const order = getOrderById(orderId);
+  const order = await getOrderById(orderId);
   if (!order) throw new Error('Order creation failed to retrieve saved record');
 
-  persistOrderToNeon(order, order.items || []).catch((e) => {
-    console.warn('[NEON SAVE ORDER NOTICE]:', e?.message || e);
-  });
+  if (isNeonConfigured()) {
+    await persistOrderToNeon(order, order.items || []);
+  }
 
   return { order, razorpayAmountPaise: validation.total_paise };
 }
 
-export function attachRazorpayOrderId(orderId: string, razorpayOrderId: string): void {
+export async function attachRazorpayOrderId(orderId: string, razorpayOrderId: string): Promise<void> {
   const db = getDb();
   const now = new Date().toISOString();
   db.prepare(`
@@ -458,9 +605,8 @@ export function attachRazorpayOrderId(orderId: string, razorpayOrderId: string):
     WHERE id = ?
   `).run(razorpayOrderId, now, orderId);
 
-  // Record initial payment attempt
   const attemptId = `att_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
-  const order = getOrderById(orderId);
+  const order = await getOrderById(orderId);
   if (order) {
     db.prepare(`
       INSERT INTO payment_attempts (
@@ -468,11 +614,24 @@ export function attachRazorpayOrderId(orderId: string, razorpayOrderId: string):
       ) VALUES (?, ?, ?, ?, 'INR', 'created', ?, ?)
     `).run(attemptId, orderId, razorpayOrderId, order.total_paise, now, now);
   }
+
+  if (isNeonConfigured()) {
+    await attachRazorpayOrderIdToNeon(orderId, razorpayOrderId, order?.total_paise);
+  }
 }
 
-export function getOrderById(orderId: string): Order | null {
+export async function getOrderById(orderId: string): Promise<Order | null> {
   const db = getDb();
-  const raw = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as any;
+  let raw = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as any;
+
+  if (!raw && isNeonConfigured()) {
+    const neonOrder = await fetchOrderFromNeonById(orderId);
+    if (neonOrder) {
+      cacheNeonOrderToSqlite(neonOrder);
+      raw = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as any;
+    }
+  }
+
   if (!raw) return null;
   const order: Order = { ...raw };
   const rawItems = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId);
@@ -482,9 +641,18 @@ export function getOrderById(orderId: string): Order | null {
   return toPlain(order);
 }
 
-export function getOrderByReference(reference: string): Order | null {
+export async function getOrderByReference(reference: string): Promise<Order | null> {
   const db = getDb();
-  const raw = db.prepare('SELECT * FROM orders WHERE order_reference = ?').get(reference) as any;
+  let raw = db.prepare('SELECT * FROM orders WHERE order_reference = ?').get(reference) as any;
+
+  if (!raw && isNeonConfigured()) {
+    const neonOrder = await fetchOrderFromNeonByReference(reference);
+    if (neonOrder) {
+      cacheNeonOrderToSqlite(neonOrder);
+      raw = db.prepare('SELECT * FROM orders WHERE order_reference = ?').get(reference) as any;
+    }
+  }
+
   if (!raw) return null;
   const order: Order = { ...raw };
   const rawItems = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
@@ -494,9 +662,18 @@ export function getOrderByReference(reference: string): Order | null {
   return toPlain(order);
 }
 
-export function getOrderByRazorpayOrderId(rpOrderId: string): Order | null {
+export async function getOrderByRazorpayOrderId(rpOrderId: string): Promise<Order | null> {
   const db = getDb();
-  const raw = db.prepare('SELECT * FROM orders WHERE razorpay_order_id = ?').get(rpOrderId) as any;
+  let raw = db.prepare('SELECT * FROM orders WHERE razorpay_order_id = ?').get(rpOrderId) as any;
+
+  if (!raw && isNeonConfigured()) {
+    const neonOrder = await fetchOrderFromNeonByRazorpayOrderId(rpOrderId);
+    if (neonOrder) {
+      cacheNeonOrderToSqlite(neonOrder);
+      raw = db.prepare('SELECT * FROM orders WHERE razorpay_order_id = ?').get(rpOrderId) as any;
+    }
+  }
+
   if (!raw) return null;
   const order: Order = { ...raw };
   const rawItems = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
@@ -504,7 +681,7 @@ export function getOrderByRazorpayOrderId(rpOrderId: string): Order | null {
   return toPlain(order);
 }
 
-export function getOrderByRazorpayPaymentId(paymentId: string): Order | null {
+export async function getOrderByRazorpayPaymentId(paymentId: string): Promise<Order | null> {
   const db = getDb();
   const raw = db.prepare('SELECT * FROM orders WHERE razorpay_payment_id = ?').get(paymentId) as any;
   if (!raw) return null;
@@ -514,11 +691,17 @@ export function getOrderByRazorpayPaymentId(paymentId: string): Order | null {
   return toPlain(order);
 }
 
-export function getOrdersByCustomerEmail(email: string): Order[] {
+export async function getOrdersByCustomerEmail(email: string): Promise<Order[]> {
+  const normalizedEmail = email.toLowerCase().trim();
+  if (isNeonConfigured()) {
+    const neonOrders = await fetchOrdersFromNeonByCustomerId('', normalizedEmail);
+    if (neonOrders.length > 0) return toPlain(neonOrders);
+  }
+
   const db = getDb();
   const rawOrders = db.prepare(
     'SELECT * FROM orders WHERE LOWER(customer_email) = ? ORDER BY created_at DESC'
-  ).all(email.toLowerCase().trim()) as any[];
+  ).all(normalizedEmail) as any[];
   
   const itemStmt = db.prepare('SELECT * FROM order_items WHERE order_id = ?');
   const orders: Order[] = [];
@@ -532,7 +715,7 @@ export function getOrdersByCustomerEmail(email: string): Order[] {
 }
 
 // --- CUSTOMER ACCOUNT SERVICES ---
-export function createCustomer(data: {
+export async function createCustomer(data: {
   name: string;
   email: string;
   phone: string;
@@ -543,12 +726,11 @@ export function createCustomer(data: {
   state?: string;
   postal_code?: string;
   country?: string;
-}): Customer {
+}): Promise<Customer> {
   const db = getDb();
   const normalizedEmail = data.email.trim().toLowerCase();
   
-  // Check if customer already exists
-  const existing = db.prepare('SELECT id FROM customers WHERE email = ?').get(normalizedEmail);
+  const existing = await getCustomerByEmail(normalizedEmail);
   if (existing) {
     throw new Error('An account with this email address already exists. Please log in.');
   }
@@ -580,41 +762,62 @@ export function createCustomer(data: {
     now
   );
 
-  const customer = getCustomerById(customerId)!;
-  persistCustomerToNeon(customer, hash, salt).catch((e) => {
-    console.warn('[NEON SAVE CUSTOMER NOTICE]:', e?.message || e);
-  });
+  const customer = (await getCustomerById(customerId))!;
+  if (isNeonConfigured()) {
+    await persistCustomerToNeon(customer, hash, salt);
+  }
   return customer;
 }
 
-export function authenticateCustomer(email: string, password: string): Customer | null {
-  const db = getDb();
+export async function authenticateCustomer(email: string, password: string): Promise<Customer | null> {
   const normalizedEmail = email.trim().toLowerCase();
-  const raw = db.prepare('SELECT * FROM customers WHERE email = ? AND is_active = 1').get(normalizedEmail) as any;
+  const customer = await getCustomerByEmail(normalizedEmail);
+  if (!customer) return null;
+
+  const db = getDb();
+  const raw = db.prepare('SELECT password_hash, password_salt FROM customers WHERE email = ?').get(normalizedEmail) as any;
   if (!raw) return null;
 
   const valid = verifyPassword(password, raw.password_hash, raw.password_salt);
   if (!valid) return null;
 
-  return getCustomerById(raw.id);
+  return customer;
 }
 
-export function getCustomerById(id: string): Customer | null {
+export async function getCustomerById(id: string): Promise<Customer | null> {
   const db = getDb();
-  const raw = db.prepare('SELECT id, email, name, phone, address_line1, address_line2, city, state, postal_code, country, is_active, created_at, updated_at FROM customers WHERE id = ?').get(id) as any;
+  let raw = db.prepare('SELECT id, email, name, phone, address_line1, address_line2, city, state, postal_code, country, is_active, created_at, updated_at FROM customers WHERE id = ?').get(id) as any;
+
+  if (!raw && isNeonConfigured()) {
+    const neonCustomer = await fetchCustomerFromNeonById(id);
+    if (neonCustomer) {
+      cacheNeonCustomerToSqlite(neonCustomer);
+      raw = db.prepare('SELECT id, email, name, phone, address_line1, address_line2, city, state, postal_code, country, is_active, created_at, updated_at FROM customers WHERE id = ?').get(id) as any;
+    }
+  }
+
   if (!raw) return null;
   return toPlain(raw);
 }
 
-export function getCustomerByEmail(email: string): Customer | null {
+export async function getCustomerByEmail(email: string): Promise<Customer | null> {
   const db = getDb();
   const normalizedEmail = email.trim().toLowerCase();
-  const raw = db.prepare('SELECT id, email, name, phone, address_line1, address_line2, city, state, postal_code, country, is_active, created_at, updated_at FROM customers WHERE email = ?').get(normalizedEmail) as any;
+  let raw = db.prepare('SELECT id, email, name, phone, address_line1, address_line2, city, state, postal_code, country, is_active, created_at, updated_at FROM customers WHERE email = ?').get(normalizedEmail) as any;
+
+  if (!raw && isNeonConfigured()) {
+    const neonCustomer = await fetchCustomerFromNeonByEmail(normalizedEmail);
+    if (neonCustomer) {
+      cacheNeonCustomerToSqlite(neonCustomer);
+      raw = db.prepare('SELECT id, email, name, phone, address_line1, address_line2, city, state, postal_code, country, is_active, created_at, updated_at FROM customers WHERE email = ?').get(normalizedEmail) as any;
+    }
+  }
+
   if (!raw) return null;
   return toPlain(raw);
 }
 
-export function updateCustomerProfile(id: string, data: Partial<Customer>): Customer | null {
+export async function updateCustomerProfile(id: string, data: Partial<Customer>): Promise<Customer | null> {
   const db = getDb();
   const allowed = ['name', 'phone', 'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country'];
   const fields: string[] = [];
@@ -628,27 +831,35 @@ export function updateCustomerProfile(id: string, data: Partial<Customer>): Cust
     }
   }
 
-  if (fields.length === 0) return getCustomerById(id);
+  if (fields.length > 0) {
+    fields.push('updated_at = ?');
+    values.push(now);
+    values.push(id);
+    db.prepare(`UPDATE customers SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  }
 
-  fields.push('updated_at = ?');
-  values.push(now);
-  values.push(id);
+  if (isNeonConfigured()) {
+    await updateCustomerProfileInNeon(id, data);
+  }
 
-  db.prepare(`UPDATE customers SET ${fields.join(', ')} WHERE id = ?`).run(...values);
-  return getCustomerById(id);
+  return await getCustomerById(id);
 }
 
-export function getOrdersByCustomerId(customerId: string): Order[] {
-  const db = getDb();
-  const customer = getCustomerById(customerId);
+export async function getOrdersByCustomerId(customerId: string): Promise<Order[]> {
+  const customer = await getCustomerById(customerId);
   if (!customer) return [];
 
-  // Match by customer_id OR customer_email for full fidelity
+  if (isNeonConfigured()) {
+    const neonOrders = await fetchOrdersFromNeonByCustomerId(customerId, customer.email);
+    if (neonOrders.length > 0) return toPlain(neonOrders);
+  }
+
+  const db = getDb();
   const rawOrders = db.prepare(`
     SELECT * FROM orders 
     WHERE customer_id = ? OR LOWER(customer_email) = ?
     ORDER BY created_at DESC
-  `).all(customerId, customer.email.toLowerCase()) as any[];
+  `).all(customerId, customer.email.toLowerCase().trim()) as any[];
 
   const itemStmt = db.prepare('SELECT * FROM order_items WHERE order_id = ?');
   const refundStmt = db.prepare('SELECT * FROM refunds WHERE order_id = ? ORDER BY created_at DESC');
@@ -664,12 +875,12 @@ export function getOrdersByCustomerId(customerId: string): Order[] {
   return toPlain(orders);
 }
 
-// Payment reconciliation & updates
-export function markOrderPaid(
+// --- ORDER MUTATION & FULFILMENT SERVICES ---
+export async function markOrderPaid(
   orderId: string,
   razorpayPaymentId: string,
   razorpaySignature?: string
-): Order {
+): Promise<Order> {
   const db = getDb();
   const now = new Date().toISOString();
 
@@ -683,7 +894,6 @@ export function markOrderPaid(
     WHERE id = ?
   `).run(razorpayPaymentId, razorpaySignature || null, now, orderId);
 
-  // Update or insert payment attempt record
   db.prepare(`
     UPDATE payment_attempts
     SET razorpay_payment_id = ?, status = 'captured', updated_at = ?
@@ -691,22 +901,22 @@ export function markOrderPaid(
   `).run(razorpayPaymentId, now, orderId);
 
   // Automatically generate tax invoice upon confirmed payment
-  generateInvoiceRecord(orderId);
+  await generateInvoiceRecord(orderId);
 
-  updateOrderPaymentInNeon(orderId, razorpayPaymentId, razorpaySignature).catch((e) => {
-    console.warn('[NEON UPDATE PAYMENT NOTICE]:', e?.message || e);
-  });
+  if (isNeonConfigured()) {
+    await updateOrderPaymentInNeon(orderId, razorpayPaymentId, razorpaySignature);
+  }
 
-  const updated = getOrderById(orderId);
+  const updated = await getOrderById(orderId);
   if (!updated) throw new Error('Order not found after update');
   return updated;
 }
 
-export function markOrderPaymentFailed(
+export async function markOrderPaymentFailed(
   orderId: string,
   errorCode?: string,
   errorDesc?: string
-): Order | null {
+): Promise<Order | null> {
   const db = getDb();
   const now = new Date().toISOString();
 
@@ -718,7 +928,6 @@ export function markOrderPaymentFailed(
       return null;
     }
 
-    // Restore stock if not already restored and payment is not paid
     if (rawOrder.payment_status !== 'paid' && (!rawOrder.stock_restored || rawOrder.stock_restored === 0)) {
       const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId) as any[];
       for (const item of items) {
@@ -751,15 +960,19 @@ export function markOrderPaymentFailed(
     throw err;
   }
 
-  return getOrderById(orderId);
+  if (isNeonConfigured()) {
+    await updateOrderPaymentFailedInNeon(orderId, errorCode, errorDesc);
+  }
+
+  return await getOrderById(orderId);
 }
 
-export function updateOrderFulfilment(
+export async function updateOrderFulfilment(
   orderId: string,
   status: Order['fulfilment_status'],
   carrier?: string,
   trackingNumber?: string
-): void {
+): Promise<void> {
   const db = getDb();
   const now = new Date().toISOString();
 
@@ -771,17 +984,20 @@ export function updateOrderFulfilment(
         updated_at = ?
     WHERE id = ?
   `).run(status, carrier || null, trackingNumber || null, now, orderId);
+
+  if (isNeonConfigured()) {
+    await updateOrderFulfilmentInNeon(orderId, status, carrier, trackingNumber);
+  }
 }
 
-// Admin directly sets order to cancelled with optional inventory restocking
-export function adminCancelOrder(
+export async function adminCancelOrder(
   orderId: string,
   params: {
     reason?: string;
     restock?: boolean;
     adminEmail?: string;
   }
-): Order {
+): Promise<Order> {
   const db = getDb();
   const now = new Date().toISOString();
   const shouldRestock = params.restock !== false;
@@ -817,7 +1033,6 @@ export function adminCancelOrder(
       orderId
     );
 
-    // Audit log
     db.prepare(`
       INSERT INTO audit_logs (id, actor_type, actor_id, action, entity_type, entity_id, details_json, created_at)
       VALUES (?, 'admin', ?, 'order_cancelled', 'order', ?, ?, ?)
@@ -838,16 +1053,19 @@ export function adminCancelOrder(
     throw err;
   }
 
-  const updated = getOrderById(orderId);
+  if (isNeonConfigured()) {
+    await updateOrderCancellationInNeon(orderId, 'approved', params.reason, params.adminEmail, shouldRestock);
+  }
+
+  const updated = await getOrderById(orderId);
   if (!updated) throw new Error('Order not found after cancellation');
   return updated;
 }
 
-// Customer initiates a cancellation request (Intimation before admin review)
-export function requestOrderCancellation(
+export async function requestOrderCancellation(
   orderId: string,
   reason: string
-): Order {
+): Promise<Order> {
   const db = getDb();
   const now = new Date().toISOString();
 
@@ -860,17 +1078,20 @@ export function requestOrderCancellation(
     WHERE id = ?
   `).run(reason, now, now, orderId);
 
-  const updated = getOrderById(orderId);
+  if (isNeonConfigured()) {
+    await updateOrderCancellationInNeon(orderId, 'requested', reason);
+  }
+
+  const updated = await getOrderById(orderId);
   if (!updated) throw new Error('Order not found after cancellation request');
   return updated;
 }
 
-// Admin rejects a customer's cancellation request
-export function rejectOrderCancellation(
+export async function rejectOrderCancellation(
   orderId: string,
   adminNotes: string,
   adminEmail: string
-): Order {
+): Promise<Order> {
   const db = getDb();
   const now = new Date().toISOString();
 
@@ -882,7 +1103,6 @@ export function rejectOrderCancellation(
     WHERE id = ?
   `).run(adminNotes, now, orderId);
 
-  // Audit log
   db.prepare(`
     INSERT INTO audit_logs (id, actor_type, actor_id, action, entity_type, entity_id, details_json, created_at)
     VALUES (?, 'admin', ?, 'cancellation_rejected', 'order', ?, ?, ?)
@@ -894,7 +1114,11 @@ export function rejectOrderCancellation(
     now
   );
 
-  const updated = getOrderById(orderId);
+  if (isNeonConfigured()) {
+    await updateOrderCancellationInNeon(orderId, 'rejected', null, adminNotes);
+  }
+
+  const updated = await getOrderById(orderId);
   if (!updated) throw new Error('Order not found after rejection update');
   return updated;
 }
@@ -906,16 +1130,20 @@ export function isWebhookProcessed(eventId: string): boolean {
   return !!row;
 }
 
-export function recordWebhookEvent(eventId: string, eventType: string, payload: any): void {
+export async function recordWebhookEvent(eventId: string, eventType: string, payload: any): Promise<void> {
   const db = getDb();
   const now = new Date().toISOString();
   db.prepare(`
     INSERT OR IGNORE INTO webhook_events (id, event_type, payload_json, status, created_at)
     VALUES (?, ?, ?, 'received', ?)
   `).run(eventId, eventType, JSON.stringify(payload), now);
+
+  if (isNeonConfigured()) {
+    await recordWebhookEventInNeon(eventId, eventType, payload, 'received');
+  }
 }
 
-export function markWebhookProcessed(eventId: string, error?: string): void {
+export async function markWebhookProcessed(eventId: string, error?: string): Promise<void> {
   const db = getDb();
   const now = new Date().toISOString();
   db.prepare(`
@@ -923,15 +1151,19 @@ export function markWebhookProcessed(eventId: string, error?: string): void {
     SET status = ?, processed_at = ?, error_message = ?
     WHERE id = ?
   `).run(error ? 'error' : 'processed', now, error || null, eventId);
+
+  if (isNeonConfigured()) {
+    await markWebhookProcessedInNeon(eventId, error);
+  }
 }
 
 // --- INVOICE GENERATOR ---
-export function generateInvoiceRecord(orderId: string): any {
+export async function generateInvoiceRecord(orderId: string): Promise<any> {
   const db = getDb();
   const existing = db.prepare('SELECT * FROM invoices WHERE order_id = ?').get(orderId);
   if (existing) return existing;
 
-  const order = getOrderById(orderId);
+  const order = await getOrderById(orderId);
   if (!order) return null;
 
   const invoiceId = `inv_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
@@ -944,6 +1176,24 @@ export function generateInvoiceRecord(orderId: string): any {
   const companyAddress = '2nd Floor, 235 Binnamangala, 13th Cross Road, Indiranagar, Bengaluru 560038, Karnataka, India';
   const customerAddress = `${order.shipping_address_line1}, ${order.shipping_address_line2 ? order.shipping_address_line2 + ', ' : ''}${order.shipping_city}, ${order.shipping_state} - ${order.shipping_postal_code}`;
 
+  const invoiceRecord = {
+    id: invoiceId,
+    order_id: orderId,
+    invoice_number: invoiceNumber,
+    invoice_date: now.slice(0, 10),
+    company_name: companyName,
+    company_address: companyAddress,
+    gstin: process.env.INVOICE_GSTIN || 'UNREGISTERED/CONSUMER',
+    customer_name: order.customer_name,
+    customer_email: order.customer_email,
+    customer_address: customerAddress,
+    subtotal_paise: order.subtotal_paise,
+    tax_paise: order.tax_paise,
+    shipping_paise: order.shipping_paise,
+    total_paise: order.total_paise,
+    created_at: now
+  };
+
   db.prepare(`
     INSERT INTO invoices (
       id, order_id, invoice_number, invoice_date, company_name, company_address,
@@ -951,34 +1201,47 @@ export function generateInvoiceRecord(orderId: string): any {
       tax_paise, shipping_paise, total_paise, created_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    invoiceId,
-    orderId,
-    invoiceNumber,
-    now.slice(0, 10),
-    companyName,
-    companyAddress,
-    process.env.INVOICE_GSTIN || 'UNREGISTERED/CONSUMER',
-    order.customer_name,
-    order.customer_email,
-    customerAddress,
-    order.subtotal_paise,
-    order.tax_paise,
-    order.shipping_paise,
-    order.total_paise,
-    now
+    invoiceRecord.id,
+    invoiceRecord.order_id,
+    invoiceRecord.invoice_number,
+    invoiceRecord.invoice_date,
+    invoiceRecord.company_name,
+    invoiceRecord.company_address,
+    invoiceRecord.gstin,
+    invoiceRecord.customer_name,
+    invoiceRecord.customer_email,
+    invoiceRecord.customer_address,
+    invoiceRecord.subtotal_paise,
+    invoiceRecord.tax_paise,
+    invoiceRecord.shipping_paise,
+    invoiceRecord.total_paise,
+    invoiceRecord.created_at
   );
+
+  if (isNeonConfigured()) {
+    await persistInvoiceToNeon(invoiceRecord);
+  }
 
   return db.prepare('SELECT * FROM invoices WHERE id = ?').get(invoiceId);
 }
 
-export function getInvoiceByOrderId(orderId: string): any {
+export async function getInvoiceByOrderId(orderId: string): Promise<any> {
   const db = getDb();
-  const raw = db.prepare('SELECT * FROM invoices WHERE order_id = ?').get(orderId);
+  let raw = db.prepare('SELECT * FROM invoices WHERE order_id = ?').get(orderId);
+
+  if (!raw && isNeonConfigured()) {
+    const neonInv = await fetchInvoiceFromNeonByOrderId(orderId);
+    if (neonInv) {
+      cacheNeonInvoiceToSqlite(neonInv);
+      raw = db.prepare('SELECT * FROM invoices WHERE order_id = ?').get(orderId);
+    }
+  }
+
   return toPlain(raw);
 }
 
 // --- REFUND AND CANCELLATION METHODS ---
-export function createOrderRefund(params: {
+export async function createOrderRefund(params: {
   orderId: string;
   razorpayRefundId?: string | null;
   razorpayPaymentId?: string | null;
@@ -987,9 +1250,9 @@ export function createOrderRefund(params: {
   initiatedBy: 'customer' | 'admin' | 'webhook';
   restock?: boolean;
   notes?: string;
-}): Refund {
+}): Promise<Refund> {
   const db = getDb();
-  const order = getOrderById(params.orderId);
+  const order = await getOrderById(params.orderId);
   if (!order) {
     throw new Error(`Order ${params.orderId} not found`);
   }
@@ -999,7 +1262,6 @@ export function createOrderRefund(params: {
   const shouldRestock = params.restock !== false;
   const restockInt = shouldRestock ? 1 : 0;
 
-  // Calculate new payment status based on cumulative refunds
   const existingRefunds = db.prepare('SELECT COALESCE(SUM(amount_paise), 0) as total FROM refunds WHERE order_id = ? AND status = ?').get(params.orderId, 'processed');
   const totalRefundedPaise = (existingRefunds?.total || 0) + params.amountPaise;
   const isFullRefund = totalRefundedPaise >= order.total_paise;
@@ -1010,7 +1272,6 @@ export function createOrderRefund(params: {
 
   db.exec('BEGIN IMMEDIATE TRANSACTION;');
   try {
-    // 1. Insert refund record
     db.prepare(`
       INSERT INTO refunds (
         id, order_id, razorpay_refund_id, razorpay_payment_id, amount_paise,
@@ -1031,7 +1292,6 @@ export function createOrderRefund(params: {
       now
     );
 
-    // 2. Update order status
     db.prepare(`
       UPDATE orders
       SET payment_status = ?,
@@ -1042,7 +1302,6 @@ export function createOrderRefund(params: {
       WHERE id = ?
     `).run(newPaymentStatus, newFulfilmentStatus, newFulfilmentStatus, restockInt, now, params.orderId);
 
-    // 3. Atomically restore variant inventory if requested
     if (shouldRestock && (!order.stock_restored || order.stock_restored === 0) && order.items && order.items.length > 0) {
       for (const item of order.items) {
         db.prepare(`
@@ -1053,7 +1312,6 @@ export function createOrderRefund(params: {
       }
     }
 
-    // 4. Record audit log
     db.prepare(`
       INSERT INTO audit_logs (id, actor_type, actor_id, action, entity_type, entity_id, details_json, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -1081,23 +1339,34 @@ export function createOrderRefund(params: {
   }
 
   const record = db.prepare('SELECT * FROM refunds WHERE id = ?').get(refundId);
-  return toPlain(record) as Refund;
+  const refund = toPlain(record) as Refund;
+
+  if (isNeonConfigured()) {
+    await persistRefundToNeon(refund);
+  }
+
+  return refund;
 }
 
-export function getRefundsByOrderId(orderId: string): Refund[] {
+export async function getRefundsByOrderId(orderId: string): Promise<Refund[]> {
   const db = getDb();
   const raw = db.prepare('SELECT * FROM refunds WHERE order_id = ? ORDER BY created_at DESC').all(orderId);
   return toPlain(raw) as Refund[];
 }
 
-export function getRefundByRazorpayRefundId(razorpayRefundId: string): Refund | null {
+export async function getRefundByRazorpayRefundId(razorpayRefundId: string): Promise<Refund | null> {
   const db = getDb();
   const raw = db.prepare('SELECT * FROM refunds WHERE razorpay_refund_id = ?').get(razorpayRefundId);
   return toPlain(raw) as Refund | null;
 }
 
 // --- ADMIN DASHBOARD QUERIES ---
-export function getAdminStats() {
+export async function getAdminStats(): Promise<any> {
+  if (isNeonConfigured()) {
+    const neonStats = await fetchAdminStatsFromNeon();
+    if (neonStats) return neonStats;
+  }
+
   const db = getDb();
   const totalOrders = db.prepare('SELECT COUNT(*) as count FROM orders').get().count;
   const grossSalesPaise = db.prepare("SELECT COALESCE(SUM(total_paise), 0) as total FROM orders WHERE payment_status = 'paid'").get().total;
@@ -1130,7 +1399,12 @@ export function getAdminStats() {
   });
 }
 
-export function getAllOrdersAdmin(status?: string, search?: string): Order[] {
+export async function getAllOrdersAdmin(status?: string, search?: string): Promise<Order[]> {
+  if (isNeonConfigured() && (!status || status === 'all') && (!search || !search.trim())) {
+    const neonOrders = await fetchAllOrdersFromNeon();
+    if (neonOrders.length > 0) return toPlain(neonOrders);
+  }
+
   const db = getDb();
   let query = 'SELECT * FROM orders WHERE 1=1';
   const params: any[] = [];

@@ -41,21 +41,21 @@ test('Database and Authentication tests', async (t) => {
     assert.strictEqual(verifyPassword('WrongPass', hash, salt), false);
   });
 
-  await t.test('Should initialize database and load seeded products', () => {
+  await t.test('Should initialize database and load seeded products', async () => {
     const db = getDb();
     assert.ok(db, 'DB instance should exist');
 
-    const products = getAllProducts(false);
+    const products = await getAllProducts(false);
     assert.ok(products.length >= 3, 'Should have at least 3 products (Mango, Lychee, Duo)');
 
-    const mango = getProductBySlug('mibiotics-mango');
+    const mango = await getProductBySlug('mibiotics-mango');
     assert.ok(mango, 'Alphonso Mango product should exist');
     assert.strictEqual(mango.flavor, 'Alphonso Mango');
     assert.ok(mango.variants.length >= 3, 'Mango should have at least 3 pack variants');
   });
 
-  await t.test('Should independently validate cart prices from database and calculate correct totals', () => {
-    const mango = getProductBySlug('mibiotics-mango');
+  await t.test('Should independently validate cart prices from database and calculate correct totals', async () => {
+    const mango = await getProductBySlug('mibiotics-mango');
     const sixPack = mango.variants.find((v) => v.pack_size === 6);
 
     // 1 unit of 6-pack (₹540 = 54000 paise) -> Subtotal < ₹999 -> Shipping should be ₹99 (9900 paise)
@@ -81,12 +81,12 @@ test('Database and Authentication tests', async (t) => {
     assert.strictEqual(resNonExistent.valid, false);
   });
 
-  await t.test('Should create an order atomically, reserve stock, and generate order reference', () => {
-    const mango = getProductBySlug('mibiotics-mango');
+  await t.test('Should create an order atomically, reserve stock, and generate order reference', async () => {
+    const mango = await getProductBySlug('mibiotics-mango');
     const sixPack = mango.variants.find((v) => v.pack_size === 6);
     const initialStock = sixPack.stock_quantity;
 
-    const { order, razorpayAmountPaise } = createOrderWithReservation({
+    const { order, razorpayAmountPaise } = await createOrderWithReservation({
       customer_name: 'Test Customer',
       customer_email: 'customer@test.com',
       customer_phone: '9876543210',
@@ -104,22 +104,22 @@ test('Database and Authentication tests', async (t) => {
     assert.strictEqual(razorpayAmountPaise, 108000);
 
     // Verify stock was atomically decremented
-    const updatedMango = getProductBySlug('mibiotics-mango');
+    const updatedMango = await getProductBySlug('mibiotics-mango');
     const updatedSixPack = updatedMango.variants.find((v) => v.pack_size === 6);
     assert.strictEqual(updatedSixPack.stock_quantity, initialStock - 2);
 
     // Verify immutable line items
-    const savedOrder = getOrderById(order.id);
+    const savedOrder = await getOrderById(order.id);
     assert.strictEqual(savedOrder.items.length, 1);
     assert.strictEqual(savedOrder.items[0].quantity, 2);
     assert.strictEqual(savedOrder.items[0].unit_price_paise, sixPack.price_paise);
   });
 
-  await t.test('Should mark order as paid and generate tax invoice', () => {
-    const mango = getProductBySlug('mibiotics-mango');
+  await t.test('Should mark order as paid and generate tax invoice', async () => {
+    const mango = await getProductBySlug('mibiotics-mango');
     const sixPack = mango.variants.find((v) => v.pack_size === 6);
 
-    const { order } = createOrderWithReservation({
+    const { order } = await createOrderWithReservation({
       customer_name: 'Payment Test Customer',
       customer_email: 'paytest@test.com',
       customer_phone: '9876543210',
@@ -130,19 +130,19 @@ test('Database and Authentication tests', async (t) => {
       items: [{ variant_id: sixPack.id, quantity: 1 }],
     });
 
-    const paidOrder = markOrderPaid(order.id, 'pay_test_payment_123', 'sig_test_123');
+    const paidOrder = await markOrderPaid(order.id, 'pay_test_payment_123', 'sig_test_123');
     assert.strictEqual(paidOrder.payment_status, 'paid');
     assert.strictEqual(paidOrder.fulfilment_status, 'confirmed');
 
-    const invoice = getInvoiceByOrderId(order.id);
+    const invoice = await getInvoiceByOrderId(order.id);
     assert.ok(invoice, 'Tax invoice should be generated upon payment');
     assert.ok(invoice.invoice_number.startsWith('RETU-INV-'));
     assert.strictEqual(invoice.total_paise, paidOrder.total_paise);
   });
 
-  await t.test('Customer Account Management & Order Linkage', () => {
+  await t.test('Customer Account Management & Order Linkage', async () => {
     const email = `testuser_${Date.now()}@example.com`;
-    const customer = createCustomer({
+    const customer = await createCustomer({
       name: 'Rohan Verma',
       email,
       phone: '9888877777',
@@ -157,18 +157,18 @@ test('Database and Authentication tests', async (t) => {
     assert.strictEqual(customer.name, 'Rohan Verma');
 
     // Authenticate with correct password
-    const authSuccess = authenticateCustomer(email, 'SecureCustomerPass123!');
+    const authSuccess = await authenticateCustomer(email, 'SecureCustomerPass123!');
     assert.ok(authSuccess);
     assert.strictEqual(authSuccess.id, customer.id);
 
     // Authenticate with incorrect password
-    const authFail = authenticateCustomer(email, 'WrongPass123!');
+    const authFail = await authenticateCustomer(email, 'WrongPass123!');
     assert.strictEqual(authFail, null);
 
     // Create order permanently linked to customer_id
-    const mango = getProductBySlug('mibiotics-mango');
+    const mango = await getProductBySlug('mibiotics-mango');
     const sixPack = mango.variants.find((v) => v.pack_size === 6);
-    const { order } = createOrderWithReservation({
+    const { order } = await createOrderWithReservation({
       customer_id: customer.id,
       customer_name: customer.name,
       customer_email: customer.email,
@@ -183,7 +183,7 @@ test('Database and Authentication tests', async (t) => {
     assert.strictEqual(order.customer_id, customer.id);
 
     // Verify order retrieved in customer's order history
-    const customerOrders = getOrdersByCustomerId(customer.id);
+    const customerOrders = await getOrdersByCustomerId(customer.id);
     assert.ok(customerOrders.length >= 1);
     assert.strictEqual(customerOrders[0].order_reference, order.order_reference);
   });

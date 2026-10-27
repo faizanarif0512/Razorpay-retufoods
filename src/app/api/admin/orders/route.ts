@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status') || undefined;
     const search = searchParams.get('search') || undefined;
 
-    const orders = getAllOrdersAdmin(status, search);
+    const orders = await getAllOrdersAdmin(status, search);
     return NextResponse.json({ success: true, orders });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
@@ -34,10 +34,10 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Order ID and fulfilment status required' }, { status: 400 });
     }
 
-    updateOrderFulfilment(orderId, fulfilment_status, carrier, tracking_number);
+    await updateOrderFulfilment(orderId, fulfilment_status, carrier, tracking_number);
 
     // Fetch updated order and trigger transactional fulfilment email
-    const order = getOrderById(orderId);
+    const order = await getOrderById(orderId);
     if (order && (fulfilment_status === 'shipped' || fulfilment_status === 'delivered')) {
       sendOrderFulfilmentEmail(order, fulfilment_status, carrier, tracking_number).catch(console.error);
     }

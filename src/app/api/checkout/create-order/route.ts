@@ -58,13 +58,13 @@ export async function POST(req: NextRequest) {
 
     // MANDATORY PERSISTENT CUSTOMER ACCOUNT LOGIC:
     // Every order must be tied to a permanent customer account.
-    let customer = getCustomerFromRequest(req);
+    let customer = await getCustomerFromRequest(req);
     let sessionTokenToSet: string | null = null;
 
     const normalizedEmail = customer_email.trim().toLowerCase();
 
     if (!customer) {
-      const existingCustomer = getCustomerByEmail(normalizedEmail);
+      const existingCustomer = await getCustomerByEmail(normalizedEmail);
       if (existingCustomer) {
         // Customer exists: require password to authenticate and link order
         if (!customer_password) {
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
             { status: 401 }
           );
         }
-        const authenticated = authenticateCustomer(normalizedEmail, customer_password);
+        const authenticated = await authenticateCustomer(normalizedEmail, customer_password);
         if (!authenticated) {
           return NextResponse.json(
             { success: false, error: 'Incorrect password for this account. Please try again or log in first.' },
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
             { status: 400 }
           );
         }
-        customer = createCustomer({
+        customer = await createCustomer({
           name: customer_name,
           email: normalizedEmail,
           phone: customer_phone,
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // Keep customer default shipping details up to date
-      updateCustomerProfile(customer.id, {
+      await updateCustomerProfile(customer.id, {
         address_line1: shipping_address_line1,
         address_line2: shipping_address_line2,
         city: shipping_city,
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Create order and reserve stock server-side with customer_id
-    const { order, razorpayAmountPaise } = createOrderWithReservation({
+    const { order, razorpayAmountPaise } = await createOrderWithReservation({
       customer_id: customer.id,
       customer_name: customer_name.trim(),
       customer_email: normalizedEmail,
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
     });
 
     // 3. Persist association between internal order and Razorpay order
-    attachRazorpayOrderId(order.id, razorpayOrder.razorpayOrderId);
+    await attachRazorpayOrderId(order.id, razorpayOrder.razorpayOrderId);
 
     const publicRazorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_placeholder_key_id';
 

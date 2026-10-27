@@ -8,12 +8,12 @@ export async function GET(
 ) {
   try {
     const { orderId } = await params;
-    const order = getOrderById(orderId);
+    const order = await getOrderById(orderId);
     if (!order) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
 
-    const invoice = getInvoiceByOrderId(orderId);
+    const invoice = await getInvoiceByOrderId(orderId);
     if (!invoice) {
       return NextResponse.json(
         { success: false, error: 'Invoice not yet generated (order pending payment)' },

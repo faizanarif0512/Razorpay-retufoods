@@ -13,13 +13,13 @@ export default async function OrderConfirmationPage({
   params: Promise<{ orderReference: string }>;
 }) {
   const { orderReference } = await params;
-  const order = getOrderByReference(orderReference);
+  const order = await getOrderByReference(orderReference);
 
   if (!order) {
     notFound();
   }
 
-  const invoice = getInvoiceByOrderId(order.id);
+  const invoice = await getInvoiceByOrderId(order.id);
   const isPaid = order.payment_status === 'paid';
 
   return (
