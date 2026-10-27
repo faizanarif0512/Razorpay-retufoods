@@ -13,16 +13,21 @@ export default function CatalogueClient({ initialProducts }: { initialProducts: 
 
   const filteredProducts = useMemo(() => {
     return initialProducts.filter((p) => {
+      const pName = (p?.name || '').toLowerCase();
+      const pFlavor = (p?.flavor || '').toLowerCase();
+      const pDesc = (p?.description || '').toLowerCase();
+      const q = search.toLowerCase();
+
       const matchesSearch =
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.flavor.toLowerCase().includes(search.toLowerCase()) ||
-        p.description.toLowerCase().includes(search.toLowerCase());
+        pName.includes(q) ||
+        pFlavor.includes(q) ||
+        pDesc.includes(q);
 
       const matchesFlavor =
         flavorFilter === 'ALL' ||
-        (flavorFilter === 'Mango' && p.flavor.toLowerCase().includes('mango')) ||
-        (flavorFilter === 'Lychee' && p.flavor.toLowerCase().includes('lychee')) ||
-        (flavorFilter === 'Variety' && p.flavor.toLowerCase().includes('variety'));
+        (flavorFilter === 'Mango' && pFlavor.includes('mango')) ||
+        (flavorFilter === 'Lychee' && pFlavor.includes('lychee')) ||
+        (flavorFilter === 'Variety' && pFlavor.includes('variety'));
 
       return matchesSearch && matchesFlavor;
     });

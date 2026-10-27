@@ -15,10 +15,11 @@ export default function StoreProductCard({ product }: { product: Product }) {
   );
   const [addedAnimation, setAddedAnimation] = useState(false);
 
+  const flavor = (product?.flavor || '').toLowerCase();
   const flavorColor =
-    product.flavor.toLowerCase().includes('mango')
+    flavor.includes('mango')
       ? 'bg-retu-mango/20 text-yellow-800 border-retu-mango/40'
-      : product.flavor.toLowerCase().includes('lychee')
+      : flavor.includes('lychee')
       ? 'bg-retu-pink/10 text-retu-pink border-retu-pink/20'
       : 'bg-retu-purple/10 text-retu-purple border-retu-purple/20';
 
