@@ -25,7 +25,7 @@ import {
   fetchInvoiceFromNeonByOrderId,
   fetchAllOrdersFromNeon,
   fetchAdminStatsFromNeon,
-} from './neon.ts';
+} from './supabase.ts';
 import crypto from 'crypto';
 
 export interface ProductVariant {

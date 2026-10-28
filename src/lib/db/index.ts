@@ -4,7 +4,7 @@ import os from 'os';
 import crypto from 'crypto';
 
 import { DatabaseSync } from 'node:sqlite';
-import { syncNeonToLocal, isNeonConfigured } from './neon.ts';
+import { syncNeonToLocal, isNeonConfigured } from './supabase.ts';
 
 let dbInstance: any = null;
 

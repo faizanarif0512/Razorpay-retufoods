@@ -32,7 +32,7 @@ export function getPostgresPool(): pg.Pool | null {
   });
 
   poolInstance.on('error', (err) => {
-    console.error('[NEON POOL ERROR]:', err.message);
+    console.error('[SUPABASE DB POOL ERROR]:', err.message);
   });
 
   return poolInstance;

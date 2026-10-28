@@ -8,11 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test": "node --experimental-strip-types test/pricing_and_order.test.mjs && node --experimental-strip-types test/payments_and_webhooks.test.mjs",
-    "db:setup": "node scripts/setup-neon.mjs",
-    "db:sync": "node scripts/sync-sqlite-to-neon.mjs"
+    "db:test": "node scripts/test-supabase.mjs"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.2.0",
     "@supabase/supabase-js": "^2.118.0",
     "@types/pdfkit": "^0.17.6",
     "@types/pg": "^8.23.1",
@@ -28,7 +26,6 @@
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "^5.16.4",
     "@types/node": "^22.13.4",
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^19.0.8",
