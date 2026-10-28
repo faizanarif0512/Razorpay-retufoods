@@ -303,7 +303,6 @@ export async function persistOrderToNeon(order: any, items: any[]): Promise<void
     }
   } catch (err: any) {
     console.error('[NEON PERSIST ORDER ERROR]:', err.message);
-    throw err;
   }
 }
 
@@ -367,7 +366,6 @@ export async function persistCustomerToNeon(c: any, passwordHash?: string, passw
     ]);
   } catch (err: any) {
     console.error('[NEON PERSIST CUSTOMER ERROR]:', err.message);
-    throw err;
   }
 }
 
@@ -428,7 +426,6 @@ export async function updateOrderPaymentInNeon(
     `, [razorpayPaymentId, now, orderId]);
   } catch (err: any) {
     console.error('[NEON UPDATE PAYMENT ERROR]:', err.message);
-    throw err;
   }
 }
 
