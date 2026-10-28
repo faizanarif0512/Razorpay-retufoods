@@ -3,7 +3,7 @@ import { getCustomerFromRequest } from '@/lib/auth/customer';
 
 export async function GET(req: NextRequest) {
   try {
-    const customer = getCustomerFromRequest(req);
+    const customer = await getCustomerFromRequest(req);
     if (!customer) {
       return NextResponse.json({ success: false, authenticated: false, customer: null }, { status: 401 });
     }

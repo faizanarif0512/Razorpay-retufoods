@@ -171,11 +171,11 @@ export default function OrderHistoryPage() {
           <div className="bg-white rounded-2xl border border-retu-border p-5 shadow-sm mb-10 max-w-2xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-retu-charcoal text-white flex items-center justify-center font-bold text-sm">
-                {customer.name.slice(0, 1).toUpperCase()}
+                {(customer.name || customer.email || 'U').slice(0, 1).toUpperCase()}
               </div>
               <div>
-                <p className="text-xs font-bold text-retu-charcoal">{customer.name}</p>
-                <p className="text-[11px] text-gray-500">{customer.email} · {customer.phone}</p>
+                <p className="text-xs font-bold text-retu-charcoal">{customer.name || 'Valued Customer'}</p>
+                <p className="text-[11px] text-gray-500">{customer.email} {customer.phone ? `· ${customer.phone}` : ''}</p>
               </div>
             </div>
             <button

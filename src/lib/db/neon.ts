@@ -177,6 +177,25 @@ export async function fetchCustomerFromNeonById(id: string): Promise<any | null>
   }
 }
 
+export async function fetchCustomerFromNeonByPhone(phone: string): Promise<any | null> {
+  if (!isNeonConfigured()) return null;
+  try {
+    const pool = getPostgresPool();
+    if (!pool) return null;
+
+    const clean = phone.replace(/^\+91/, '').replace(/\D/g, '');
+    const res = await pool.query(
+      'SELECT * FROM customers WHERE phone = $1 OR phone = $2 OR phone LIKE $3 ORDER BY created_at DESC LIMIT 1',
+      [clean, `+91${clean}`, `%${clean}%`]
+    );
+    if (res.rows.length === 0) return null;
+    return res.rows[0];
+  } catch (err: any) {
+    console.error('[NEON FETCH CUSTOMER BY PHONE ERROR]:', err.message);
+    return null;
+  }
+}
+
 export async function fetchInvoiceFromNeonByOrderId(orderId: string): Promise<any | null> {
   if (!isNeonConfigured()) return null;
   try {

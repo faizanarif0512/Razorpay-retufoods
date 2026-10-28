@@ -59,9 +59,9 @@ export default function Header() {
 
           {/* Right Action Icons */}
           <div className="flex items-center space-x-4">
-            {/* Account / My Orders */}
+            {/* Account / Hub */}
             <Link
-              href="/store/account/orders"
+              href="/store/account"
               className="flex items-center gap-1.5 text-xs font-semibold text-retu-charcoal hover:text-retu-pink px-3 py-1.5 rounded-full hover:bg-retu-warm-white transition-colors"
               title="My Account & Orders"
             >

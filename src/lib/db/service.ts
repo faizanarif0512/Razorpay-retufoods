@@ -21,6 +21,7 @@ import {
   fetchOrdersFromNeonByCustomerId,
   fetchCustomerFromNeonByEmail,
   fetchCustomerFromNeonById,
+  fetchCustomerFromNeonByPhone,
   fetchInvoiceFromNeonByOrderId,
   fetchAllOrdersFromNeon,
   fetchAdminStatsFromNeon,
@@ -815,6 +816,81 @@ export async function getCustomerByEmail(email: string): Promise<Customer | null
 
   if (!raw) return null;
   return toPlain(raw);
+}
+
+export async function getCustomerByPhone(phone: string): Promise<Customer | null> {
+  const db = getDb();
+  const cleanPhone = phone.replace(/^\+91/, '').replace(/\D/g, '');
+  if (!cleanPhone) return null;
+
+  let raw = db.prepare('SELECT id, email, name, phone, address_line1, address_line2, city, state, postal_code, country, is_active, created_at, updated_at FROM customers WHERE phone = ? OR phone = ? OR phone LIKE ?').get(cleanPhone, `+91${cleanPhone}`, `%${cleanPhone}%`) as any;
+
+  if (!raw && isNeonConfigured()) {
+    const neonCustomer = await fetchCustomerFromNeonByPhone(cleanPhone);
+    if (neonCustomer) {
+      cacheNeonCustomerToSqlite(neonCustomer);
+      raw = db.prepare('SELECT id, email, name, phone, address_line1, address_line2, city, state, postal_code, country, is_active, created_at, updated_at FROM customers WHERE id = ?').get(neonCustomer.id) as any;
+    }
+  }
+
+  if (!raw) return null;
+  return toPlain(raw);
+}
+
+export async function findOrCreateCustomerOAuth(params: {
+  email: string;
+  name: string;
+  phone?: string;
+}): Promise<Customer> {
+  const normalizedEmail = params.email.trim().toLowerCase();
+  let customer = await getCustomerByEmail(normalizedEmail);
+
+  if (customer) {
+    if (params.phone && (!customer.phone || customer.phone === '9999999999')) {
+      await updateCustomerProfile(customer.id, { phone: params.phone });
+      customer = await getCustomerById(customer.id);
+    }
+    return customer!;
+  }
+
+  // Create new customer with secure random password for OAuth accounts
+  const randomPassword = `OAuth_${crypto.randomBytes(16).toString('hex')}!`;
+  const newCustomer = await createCustomer({
+    name: params.name || 'Customer',
+    email: normalizedEmail,
+    phone: params.phone || '9999999999',
+    password: randomPassword,
+  });
+
+  return newCustomer;
+}
+
+export async function findOrCreateCustomerPhone(params: {
+  phone: string;
+  name?: string;
+  email?: string;
+}): Promise<Customer> {
+  const cleanPhone = params.phone.replace(/^\+91/, '').replace(/\D/g, '');
+  let customer = await getCustomerByPhone(cleanPhone);
+
+  if (customer) {
+    if (params.name && customer.name.startsWith('Customer')) {
+      await updateCustomerProfile(customer.id, { name: params.name });
+      customer = await getCustomerById(customer.id);
+    }
+    return customer!;
+  }
+
+  const generatedEmail = params.email ? params.email.trim().toLowerCase() : `customer_${cleanPhone}@phone.retufoods.com`;
+  const randomPassword = `Phone_${crypto.randomBytes(16).toString('hex')}!`;
+  const newCustomer = await createCustomer({
+    name: params.name || `Customer (${cleanPhone.slice(-4)})`,
+    email: generatedEmail,
+    phone: cleanPhone,
+    password: randomPassword,
+  });
+
+  return newCustomer;
 }
 
 export async function updateCustomerProfile(id: string, data: Partial<Customer>): Promise<Customer | null> {

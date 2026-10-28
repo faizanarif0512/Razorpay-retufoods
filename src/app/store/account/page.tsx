@@ -58,7 +58,7 @@ export default function CustomerAccountHub() {
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-retu-pink">Customer Account</span>
             <h1 className="text-3xl font-extrabold text-retu-charcoal tracking-tight mt-1">
-              Welcome back, {customer.name}
+              Welcome back, {customer?.name || customer?.email || 'Valued Customer'}
             </h1>
           </div>
           <button
