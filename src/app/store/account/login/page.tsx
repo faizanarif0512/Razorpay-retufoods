@@ -19,6 +19,7 @@ import {
   KeyRound,
   RotateCcw,
 } from 'lucide-react';
+import { supabase, signInWithGoogle } from '@/lib/supabase/client';
 
 declare global {
   interface Window {
@@ -121,8 +122,47 @@ function CustomerLoginForm() {
     }
   };
 
-  // Direct Simulated Google Sign-In for demo or when Client ID is in test
+  // Listen for Supabase Google OAuth callback or active session
+  useEffect(() => {
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user && session.user.email) {
+          fetch('/api/customer/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: session.user.email,
+              name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Google Customer',
+            }),
+          }).then(async (r) => {
+            const data = await r.json();
+            if (data.success) {
+              setSuccessMsg(`Welcome, ${data.customer.name}!`);
+              setTimeout(() => {
+                router.push(redirect);
+                router.refresh();
+              }, 500);
+            }
+          }).catch(console.error);
+        }
+      });
+    }
+  }, [redirect, router]);
+
+  // Direct Google Sign-In (Uses Supabase OAuth if available, otherwise fast fallback)
   const handleDirectGoogleLogin = async () => {
+    if (supabase) {
+      try {
+        setLoading(true);
+        await signInWithGoogle();
+        return;
+      } catch (err: any) {
+        console.error('[SUPABASE GOOGLE ERROR]:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     const userPromptEmail = window.prompt(
       'Enter your Google account email to sign in instantly with Google:',
       'user@gmail.com'
