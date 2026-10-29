@@ -144,8 +144,11 @@ function CustomerLoginForm() {
       setError(`Google sign-in failed: ${oauthError.replace(/\+/g, ' ')}`);
       return;
     }
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user?.email) return;
+    // The session from the URL can arrive via getSession or a later SIGNED_IN event; finish once.
+    let finished = false;
+    const finish = async (session: any) => {
+      if (finished || !session?.user?.email) return;
+      finished = true;
       try {
         setLoading(true);
         const data = await exchangeSupabaseSession('/api/customer/google', session.access_token);
@@ -158,7 +161,14 @@ function CustomerLoginForm() {
         setError(err.message || 'Google sign-in error');
         setLoading(false);
       }
+    };
+    supabase.auth.getSession().then(({ data: { session } }) => finish(session));
+    // Only for redirect returns; One Tap finishes its own sign-in in handleGoogleCredentialResponse
+    if (!hash.has('access_token')) return;
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') finish(session);
     });
+    return () => sub.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [redirect, router]);
 

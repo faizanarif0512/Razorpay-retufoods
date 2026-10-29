@@ -4,6 +4,7 @@ import { CartProvider } from '@/context/CartContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/cart/CartDrawer';
+import OAuthReturnRedirect from '@/components/layout/OAuthReturnRedirect';
 
 export const metadata: Metadata = {
   title: 'Retü Foods Webstore | mi-biotics™ Fermented Millet Gut Shots',
@@ -37,6 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-white text-retu-charcoal">
+        <OAuthReturnRedirect />
         <CartProvider>
           <Header />
           <main className="flex-1">{children}</main>
