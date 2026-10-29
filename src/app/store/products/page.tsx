@@ -1,5 +1,5 @@
 import React from 'react';
-import { getAllProducts } from '@/data/products';
+import { getAllProducts } from '@/lib/db/service';
 import CatalogueClient from '@/components/products/CatalogueClient';
 
 export const dynamic = 'force-dynamic';

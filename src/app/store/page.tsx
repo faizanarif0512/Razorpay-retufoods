@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ShieldCheck, Award, ArrowRight, CheckCircle2, Sparkles, Truck, Droplets } from 'lucide-react';
-import { getAllProducts } from '@/data/products';
+import { getAllProducts } from '@/lib/db/service';
 import StoreProductCard from '@/components/products/StoreProductCard';
 
 export const dynamic = 'force-dynamic';

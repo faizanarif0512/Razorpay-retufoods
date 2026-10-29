@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { Order } from '@/types';
+import { useOrderUpdates } from '@/lib/supabase/useOrderUpdates';
 
 export default function OrderHistoryPage() {
   const [customer, setCustomer] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);
@@ -66,6 +67,20 @@ export default function OrderHistoryPage() {
     }
     loadCustomerAndOrders();
   }, []);
+
+  // Live updates: refetch this customer's orders whenever any order changes in Supabase.
+  useOrderUpdates(async () => {
+    if (!customer) return;
+    try {
+      const ordersRes = await fetch('/api/customer/orders');
+      if (ordersRes.ok) {
+        const ordersData = await ordersRes.json();
+        setOrders(ordersData.orders || []);
+      }
+    } catch (err) {
+      console.error('Error refreshing orders', err);
+    }
+  });
 
   const handleManualLookup = async (e: React.FormEvent) => {
     e.preventDefault();

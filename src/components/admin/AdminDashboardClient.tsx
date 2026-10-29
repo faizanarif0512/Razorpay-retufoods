@@ -24,6 +24,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Order, Product } from '@/types';
+import { useOrderUpdates } from '@/lib/supabase/useOrderUpdates';
 
 interface AdminDashboardClientProps {
   initialStats: any;
@@ -101,6 +102,12 @@ export default function AdminDashboardClient({
       console.error(e);
     }
   };
+
+  // Live updates: refetch the order list and re-render server stats when any order changes.
+  const isLive = useOrderUpdates(() => {
+    refreshOrders();
+    router.refresh();
+  });
 
   const handleUpdateFulfilment = async (orderId: string, newStatus: Order['fulfilment_status']) => {
     try {
@@ -312,6 +319,13 @@ export default function AdminDashboardClient({
           </div>
 
           <div className="flex items-center gap-4 text-xs">
+            <span
+              className={`flex items-center gap-1.5 font-semibold ${isLive ? 'text-emerald-600' : 'text-gray-400'}`}
+              title={isLive ? 'Orders update in real time' : 'Connecting to live updates…'}
+            >
+              <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`} />
+              {isLive ? 'Live' : 'Offline'}
+            </span>
             <span className="text-gray-500 hidden sm:inline">{adminEmail}</span>
             <button
               onClick={handleLogout}

@@ -19,9 +19,7 @@ import {
   KeyRound,
   RotateCcw,
 } from 'lucide-react';
-// Backend auth removed: Google sign-in is disabled in this frontend-only build.
-const supabase: any = null;
-const signInWithGoogle = async () => {};
+import { supabase, signInWithGoogle } from '@/lib/supabase/client';
 
 declare global {
   interface Window {
@@ -47,8 +45,7 @@ function CustomerLoginForm() {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [customerName, setCustomerName] = useState('');
-  const [isNewPhoneUser, setIsNewPhoneUser] = useState(false);
-  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
+  const isNewPhoneUser = true;
   const [countdown, setCountdown] = useState(0);
 
   // Status & error states
@@ -100,19 +97,30 @@ function CustomerLoginForm() {
     }
   }, []);
 
+  // Trade a verified Supabase Auth session for a store customer session cookie.
+  const exchangeSupabaseSession = async (endpoint: string, accessToken: string, extra: Record<string, any> = {}) => {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken, ...extra }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Sign-in failed');
+    }
+    // The store session is now set; the Supabase Auth session is no longer needed.
+    await supabase?.auth.signOut();
+    return data;
+  };
+
   const handleGoogleCredentialResponse = async (response: any) => {
+    if (!supabase) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/customer/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: response.credential }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Google authentication failed');
-      }
+      const { data, error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: response.credential });
+      if (error || !data.session) throw error || new Error('Google authentication failed');
+      await exchangeSupabaseSession('/api/customer/google', data.session.access_token);
       setSuccessMsg('Signed in with Google successfully!');
       setTimeout(() => {
         router.push(redirect);
@@ -124,81 +132,42 @@ function CustomerLoginForm() {
     }
   };
 
-  // Listen for Supabase Google OAuth callback or active session
+  // Returning from the Supabase Google OAuth redirect
   useEffect(() => {
-    if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }: any) => {
-        if (session?.user && session.user.email) {
-          fetch('/api/customer/google', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: session.user.email,
-              name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Google Customer',
-            }),
-          }).then(async (r) => {
-            const data = await r.json();
-            if (data.success) {
-              setSuccessMsg(`Welcome, ${data.customer.name}!`);
-              setTimeout(() => {
-                router.push(redirect);
-                router.refresh();
-              }, 500);
-            }
-          }).catch(console.error);
-        }
-      });
-    }
-  }, [redirect, router]);
-
-  // Direct Google Sign-In (Uses Supabase OAuth if available, otherwise fast fallback)
-  const handleDirectGoogleLogin = async () => {
-    if (supabase) {
+    if (!supabase) return;
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user?.email) return;
       try {
         setLoading(true);
-        await signInWithGoogle();
-        return;
+        const data = await exchangeSupabaseSession('/api/customer/google', session.access_token);
+        setSuccessMsg(`Welcome, ${data.customer.name}!`);
+        setTimeout(() => {
+          router.push(redirect);
+          router.refresh();
+        }, 500);
       } catch (err: any) {
-        console.error('[SUPABASE GOOGLE ERROR]:', err);
-      } finally {
+        setError(err.message || 'Google sign-in error');
         setLoading(false);
       }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [redirect, router]);
+
+  const handleDirectGoogleLogin = async () => {
+    if (!supabase) {
+      setError('Google sign-in is not configured yet.');
+      return;
     }
-
-    const userPromptEmail = window.prompt(
-      'Enter your Google account email to sign in instantly with Google:',
-      'user@gmail.com'
-    );
-    if (!userPromptEmail) return;
-
-    setLoading(true);
-    setError(null);
     try {
-      const res = await fetch('/api/customer/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userPromptEmail.trim().toLowerCase(),
-          name: userPromptEmail.split('@')[0].replace(/[._]/g, ' '),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Google sign-in failed');
-      }
-      setSuccessMsg(`Welcome, ${data.customer.name}!`);
-      setTimeout(() => {
-        router.push(redirect);
-        router.refresh();
-      }, 500);
+      setLoading(true);
+      await signInWithGoogle();
     } catch (err: any) {
       setError(err.message || 'Failed to sign in with Google');
-    } finally {
       setLoading(false);
     }
   };
 
-  // 1. Phone OTP: Step 1 (Send OTP)
+  // 1. Phone OTP: Step 1 (Send OTP via Supabase Auth SMS)
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const clean = phone.replace(/^\+91/, '').replace(/\D/g, '');
@@ -206,28 +175,20 @@ function CustomerLoginForm() {
       setError('Please enter a valid 10-digit mobile number');
       return;
     }
+    if (!supabase) {
+      setError('Phone sign-in is not configured yet.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch('/api/customer/phone-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'send-otp', phone: clean }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to send verification OTP');
-      }
+      const { error } = await supabase.auth.signInWithOtp({ phone: `+91${clean}` });
+      if (error) throw error;
 
       setOtpSent(true);
       setCountdown(30);
-      setIsNewPhoneUser(!data.existingUser);
-      if (data.devOtp) {
-        setDevOtpHint(data.devOtp);
-      }
       setSuccessMsg(`6-digit verification code sent to +91 ${clean}`);
     } catch (err: any) {
       setError(err.message || 'Error sending OTP. Please try again.');
@@ -236,33 +197,26 @@ function CustomerLoginForm() {
     }
   };
 
-  // 1. Phone OTP: Step 2 (Verify OTP)
+  // 1. Phone OTP: Step 2 (Verify OTP with Supabase, then start store session)
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otp || otp.trim().length !== 6) {
       setError('Please enter the complete 6-digit code');
       return;
     }
+    if (!supabase) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch('/api/customer/phone-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'verify-otp',
-          phone,
-          otp: otp.trim(),
-          name: customerName.trim() || undefined,
-        }),
-      });
+      const clean = phone.replace(/^\+91/, '').replace(/\D/g, '');
+      const { data, error } = await supabase.auth.verifyOtp({ phone: `+91${clean}`, token: otp.trim(), type: 'sms' });
+      if (error || !data.session) throw error || new Error('Invalid verification code');
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Invalid verification code');
-      }
+      await exchangeSupabaseSession('/api/customer/phone-login', data.session.access_token, {
+        name: customerName.trim() || undefined,
+      });
 
       setSuccessMsg('Phone verified successfully! Redirecting...');
       setTimeout(() => {
@@ -484,7 +438,6 @@ function CustomerLoginForm() {
                     onClick={() => {
                       setOtpSent(false);
                       setOtp('');
-                      setDevOtpHint(null);
                     }}
                     className="text-retu-pink font-semibold hover:underline"
                   >
@@ -492,23 +445,11 @@ function CustomerLoginForm() {
                   </button>
                 </div>
 
-                {devOtpHint && (
-                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-[11px] text-emerald-800">
-                    <span>Verification Code: <strong className="font-mono text-xs">{devOtpHint}</strong></span>
-                    <button
-                      type="button"
-                      onClick={() => setOtp(devOtpHint)}
-                      className="px-2 py-0.5 bg-emerald-600 text-white font-bold rounded hover:bg-emerald-700"
-                    >
-                      Auto-Fill
-                    </button>
-                  </div>
-                )}
 
                 {isNewPhoneUser && (
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Your Full Name
+                      Your Full Name (new customers)
                     </label>
                     <input
                       type="text"

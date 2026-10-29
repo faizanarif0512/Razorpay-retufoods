@@ -1,6 +1,6 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { getProductBySlug, getAllProducts } from '@/data/products';
+import { getProductBySlug, getAllProducts } from '@/lib/db/service';
 import ProductDetailClient from '@/components/products/ProductDetailClient';
 
 export const dynamic = 'force-dynamic';
