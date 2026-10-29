@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ShoppingBag, ArrowRight, Check } from 'lucide-react';
-import { Product, ProductVariant } from '@/lib/db/service';
+import { Product, ProductVariant } from '@/types';
 import { useCart } from '@/context/CartContext';
 
 export default function StoreProductCard({ product }: { product: Product }) {

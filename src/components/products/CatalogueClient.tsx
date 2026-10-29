@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Search, Filter, ShieldCheck } from 'lucide-react';
-import { Product } from '@/lib/db/service';
+import { Product } from '@/types';
 import StoreProductCard from '@/components/products/StoreProductCard';
 
 export default function CatalogueClient({ initialProducts }: { initialProducts: Product[] }) {

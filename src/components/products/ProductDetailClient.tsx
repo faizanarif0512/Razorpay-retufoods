@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   Clock,
 } from 'lucide-react';
-import { Product, ProductVariant } from '@/lib/db/service';
+import { Product, ProductVariant } from '@/types';
 import { useCart } from '@/context/CartContext';
 
 export default function ProductDetailClient({

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { CheckCircle2, ShieldCheck, Download, Printer, Truck, ArrowRight, AlertTriangle } from 'lucide-react';
-import { getOrderByReference, getInvoiceByOrderId } from '@/lib/db/service';
+import { getOrderByReference, getInvoiceByOrderId } from '@/data/products';
 
 export const dynamic = 'force-dynamic';
 

@@ -18,7 +18,7 @@ import {
   CheckCircle2,
   X,
 } from 'lucide-react';
-import { Order } from '@/lib/db/service';
+import { Order } from '@/types';
 
 export default function OrderHistoryPage() {
   const [customer, setCustomer] = useState<{ id: string; name: string; email: string; phone: string } | null>(null);

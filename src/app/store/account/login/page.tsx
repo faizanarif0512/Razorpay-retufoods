@@ -19,7 +19,9 @@ import {
   KeyRound,
   RotateCcw,
 } from 'lucide-react';
-import { supabase, signInWithGoogle } from '@/lib/supabase/client';
+// Backend auth removed: Google sign-in is disabled in this frontend-only build.
+const supabase: any = null;
+const signInWithGoogle = async () => {};
 
 declare global {
   interface Window {
@@ -125,7 +127,7 @@ function CustomerLoginForm() {
   // Listen for Supabase Google OAuth callback or active session
   useEffect(() => {
     if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
+      supabase.auth.getSession().then(({ data: { session } }: any) => {
         if (session?.user && session.user.email) {
           fetch('/api/customer/google', {
             method: 'POST',

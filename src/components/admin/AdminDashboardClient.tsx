@@ -23,7 +23,7 @@ import {
   X,
   AlertCircle,
 } from 'lucide-react';
-import { Order, Product } from '@/lib/db/service';
+import { Order, Product } from '@/types';
 
 interface AdminDashboardClientProps {
   initialStats: any;
