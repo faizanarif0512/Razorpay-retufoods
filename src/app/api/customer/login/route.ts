@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isLoginBlocked, recordLoginFailure, clearLoginFailures, TOO_MANY_ATTEMPTS } from '@/lib/auth/rateLimit';
 import { authenticateCustomer } from '@/lib/db/service';
 import { createCustomerToken, COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/customer';
 
@@ -11,11 +12,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Email and password are required' }, { status: 400 });
     }
 
+    if (isLoginBlocked(req, 'customer', email)) {
+      return NextResponse.json({ success: false, error: TOO_MANY_ATTEMPTS }, { status: 429 });
+    }
+
     const customer = await authenticateCustomer(email, password);
     if (!customer) {
+      recordLoginFailure(req, 'customer', email);
       return NextResponse.json({ success: false, error: 'Invalid email or password' }, { status: 401 });
     }
 
+    clearLoginFailures(req, 'customer', email);
     const token = createCustomerToken(customer.id);
     const response = NextResponse.json({
       success: true,
@@ -33,6 +40,6 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message || 'Login failed' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Login failed' }, { status: 500 });
   }
 }

@@ -127,7 +127,7 @@ RAZORPAY_KEY_SECRET=YOUR_ACTUAL_KEY_SECRET
 3. In **Webhook URL**, enter your public endpoint:
    - In production: `https://store.retufoods.com/api/webhooks/razorpay`
    - In local development: use [ngrok](https://ngrok.com/) to expose port 3000 (e.g., `https://xxxx.ngrok-free.app/api/webhooks/razorpay`).
-4. In **Secret**, enter a webhook secret string of your choice (e.g. `retu_live_webhook_secret_2026`).
+4. In **Secret**, enter a webhook secret string of your choice (generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
 5. In **Active Events**, select:
    - `order.paid`
    - `payment.failed`
@@ -135,7 +135,7 @@ RAZORPAY_KEY_SECRET=YOUR_ACTUAL_KEY_SECRET
 6. Click **Save Webhook**.
 7. In `.env.local`, set:
 ```env
-RAZORPAY_WEBHOOK_SECRET=retu_live_webhook_secret_2026
+RAZORPAY_WEBHOOK_SECRET=your_random_webhook_secret
 ```
 
 ### Step 4: Test Payment Flow

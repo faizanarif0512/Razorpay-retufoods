@@ -25,6 +25,18 @@ export async function GET(
       );
     }
 
+    // Customer-entered fields go into HTML below, so escape them to prevent stored XSS
+    const esc = (v: unknown) =>
+      String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+    const safeInvoice = Object.fromEntries(Object.entries(invoice).map(([k, v]) => [k, typeof v === 'string' ? esc(v) : v])) as typeof invoice;
+    const safeOrder = {
+      ...order,
+      order_reference: esc(order.order_reference),
+      customer_phone: esc(order.customer_phone),
+      razorpay_payment_id: order.razorpay_payment_id ? esc(order.razorpay_payment_id) : order.razorpay_payment_id,
+      items: (order.items || []).map((i) => ({ ...i, product_name: esc(i.product_name), variant_name: esc(i.variant_name), sku: esc(i.sku) })),
+    };
+
     const url = new URL(req.url);
     const format = url.searchParams.get('format');
 
@@ -56,7 +68,7 @@ export async function GET(
       <html lang="en">
       <head>
         <meta charset="utf-8" />
-        <title>Tax Invoice ${invoice.invoice_number} - Retü Foods</title>
+        <title>Tax Invoice ${safeInvoice.invoice_number} - Retü Foods</title>
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -181,27 +193,27 @@ export async function GET(
             <div class="badge">PAID IN FULL</div>
           </div>
           <div class="text-right">
-            <p style="margin: 0;"><strong>Invoice #:</strong> ${invoice.invoice_number}</p>
-            <p style="margin: 4px 0 0 0;"><strong>Date:</strong> ${invoice.invoice_date}</p>
-            <p style="margin: 4px 0 0 0;"><strong>Order Ref:</strong> ${order.order_reference}</p>
+            <p style="margin: 0;"><strong>Invoice #:</strong> ${safeInvoice.invoice_number}</p>
+            <p style="margin: 4px 0 0 0;"><strong>Date:</strong> ${safeInvoice.invoice_date}</p>
+            <p style="margin: 4px 0 0 0;"><strong>Order Ref:</strong> ${safeOrder.order_reference}</p>
           </div>
         </div>
 
         <div class="grid">
           <div>
             <div class="section-title">Billed By (Seller)</div>
-            <p style="margin: 0;"><strong>${invoice.company_name}</strong></p>
-            <p style="margin: 2px 0 0 0; color: #555;">${invoice.company_address}</p>
-            <p style="margin: 4px 0 0 0;"><strong>GSTIN:</strong> ${invoice.gstin || 'CONSUMER / B2C'}</p>
+            <p style="margin: 0;"><strong>${safeInvoice.company_name}</strong></p>
+            <p style="margin: 2px 0 0 0; color: #555;">${safeInvoice.company_address}</p>
+            <p style="margin: 4px 0 0 0;"><strong>GSTIN:</strong> ${safeInvoice.gstin || 'CONSUMER / B2C'}</p>
             <p style="margin: 2px 0 0 0;">Phone: 011-69269668 | ${process.env.INVOICE_SUPPORT_EMAIL || 'faizan.loyola@gmail.com'}</p>
           </div>
 
           <div>
             <div class="section-title">Billed To (Customer)</div>
-            <p style="margin: 0;"><strong>${invoice.customer_name}</strong></p>
-            <p style="margin: 2px 0 0 0; color: #555;">${invoice.customer_address}</p>
-            <p style="margin: 4px 0 0 0;">Email: ${invoice.customer_email}</p>
-            <p style="margin: 2px 0 0 0;">Mobile: ${order.customer_phone}</p>
+            <p style="margin: 0;"><strong>${safeInvoice.customer_name}</strong></p>
+            <p style="margin: 2px 0 0 0; color: #555;">${safeInvoice.customer_address}</p>
+            <p style="margin: 4px 0 0 0;">Email: ${safeInvoice.customer_email}</p>
+            <p style="margin: 2px 0 0 0;">Mobile: ${safeOrder.customer_phone}</p>
           </div>
         </div>
 
@@ -217,7 +229,7 @@ export async function GET(
             </tr>
           </thead>
           <tbody>
-            ${(order.items || [])
+            ${(safeOrder.items || [])
               .map(
                 (item, idx) => `
               <tr>
@@ -257,7 +269,7 @@ export async function GET(
         </div>
 
         <div class="footer-note">
-          <p><strong>Razorpay Payment Reference:</strong> ${order.razorpay_payment_id || 'Captured'}</p>
+          <p><strong>Razorpay Payment Reference:</strong> ${safeOrder.razorpay_payment_id || 'Captured'}</p>
           <p>This is a computer-generated tax invoice issued by DancingEarth Food Private Limited. All mi-biotics™ products are manufactured on a dedicated line in Coimbatore, Tamil Nadu under Indian Patent No. 551921.</p>
         </div>
       </body>
