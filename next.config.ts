@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ['pdfkit'],
+  // pdfkit loads its built-in fonts by dynamic path, so file tracing misses them on Vercel
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./node_modules/pdfkit/js/standard-fonts/**', './node_modules/pdfkit/js/data/**'],
+  },
   poweredByHeader: false,
   async headers() {
     return [
