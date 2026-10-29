@@ -135,6 +135,15 @@ function CustomerLoginForm() {
   // Returning from the Supabase Google OAuth redirect
   useEffect(() => {
     if (!supabase) return;
+    // Supabase reports OAuth failures (e.g. a bad Google client secret) in the URL instead of a session
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const oauthError =
+      searchParams.get('error_description') || hash.get('error_description') ||
+      searchParams.get('error') || hash.get('error');
+    if (oauthError) {
+      setError(`Google sign-in failed: ${oauthError.replace(/\+/g, ' ')}`);
+      return;
+    }
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session?.user?.email) return;
       try {
