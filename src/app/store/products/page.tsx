@@ -2,7 +2,8 @@ import React from 'react';
 import { getAllProducts } from '@/lib/db/service';
 import CatalogueClient from '@/components/products/CatalogueClient';
 
-export const dynamic = 'force-dynamic';
+// Rebuilt at most once a minute; checkout re-checks price and stock on the server
+export const revalidate = 60;
 
 export default async function ProductsPage() {
   const products = await getAllProducts(false);

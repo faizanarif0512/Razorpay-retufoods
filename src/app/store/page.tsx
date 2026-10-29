@@ -5,7 +5,8 @@ import { ShieldCheck, Award, ArrowRight, CheckCircle2, Sparkles, Truck, Droplets
 import { getAllProducts } from '@/lib/db/service';
 import StoreProductCard from '@/components/products/StoreProductCard';
 
-export const dynamic = 'force-dynamic';
+// Rebuilt at most once a minute; checkout re-checks price and stock on the server
+export const revalidate = 60;
 
 export default async function StorePage() {
   const products = await getAllProducts(false);

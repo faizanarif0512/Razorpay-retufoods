@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { verifyAdminToken, SESSION_COOKIE_NAME } from '@/lib/auth/admin';
 import { getAllProducts, updateProduct, updateVariant } from '@/lib/db/service';
 
@@ -33,6 +34,10 @@ export async function PATCH(req: NextRequest) {
     } else {
       return NextResponse.json({ success: false, error: 'Invalid update type' }, { status: 400 });
     }
+
+    // Show admin edits on the cached storefront immediately
+    revalidatePath('/store', 'layout');
+    revalidatePath('/api/products');
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

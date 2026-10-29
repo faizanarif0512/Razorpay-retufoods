@@ -3,7 +3,14 @@ import { notFound } from 'next/navigation';
 import { getProductBySlug, getAllProducts } from '@/lib/db/service';
 import ProductDetailClient from '@/components/products/ProductDetailClient';
 
-export const dynamic = 'force-dynamic';
+// Rebuilt at most once a minute; checkout re-checks price and stock on the server
+export const revalidate = 60;
+
+// Pre-build current products; new slugs are still rendered on first visit
+export async function generateStaticParams() {
+  const products = await getAllProducts(false);
+  return products.map((p) => ({ slug: p.slug }));
+}
 
 export default async function ProductDetailPage({
   params,
