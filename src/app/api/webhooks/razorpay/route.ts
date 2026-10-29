@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
     }
 
     const event = JSON.parse(rawBody);
-    const eventId = event.event_id || event.id || `evt_${Date.now()}`;
+    // Razorpay sends the unique event id only in this header; it keeps retries idempotent
+    const eventId = req.headers.get('x-razorpay-event-id') || event.event_id || event.id || `evt_${Date.now()}`;
     const eventType = event.event;
 
     // Check idempotency: If event was already processed, respond 200 immediately

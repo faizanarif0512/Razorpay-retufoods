@@ -42,7 +42,16 @@ export default function RazorpayPaymentModal({
 }: RazorpayModalProps) {
   const isPaymentCompletedRef = useRef(false);
 
+  // The parent re-renders while verifying payment, which recreates these callbacks. Keep the
+  // latest ones in refs so the effect below runs once per order and never reopens Razorpay.
+  const callbacksRef = useRef({ onSuccess, onFailure, onClose });
+  callbacksRef.current = { onSuccess, onFailure, onClose };
+
   useEffect(() => {
+    const onSuccess = (paymentId: string, signature: string) => callbacksRef.current.onSuccess(paymentId, signature);
+    const onFailure = (error: string) => callbacksRef.current.onFailure(error);
+    const onClose = () => callbacksRef.current.onClose();
+    let rzp: any = null;
     // If not simulator and not placeholder key, load Razorpay script
     if (!isSimulator && keyId && !keyId.includes('placeholder')) {
       const script = document.createElement('script');
@@ -50,7 +59,7 @@ export default function RazorpayPaymentModal({
       script.async = true;
       script.onload = () => {
         try {
-          const rzp = new window.Razorpay({
+          rzp = new window.Razorpay({
             key: keyId,
             amount: amountPaise,
             currency: currency || 'INR',
@@ -91,12 +100,14 @@ export default function RazorpayPaymentModal({
       document.body.appendChild(script);
 
       return () => {
+        try { if (!isPaymentCompletedRef.current) rzp?.close(); } catch {}
         if (document.body.contains(script)) {
           document.body.removeChild(script);
         }
       };
     }
-  }, [isSimulator, keyId, amountPaise, currency, customer, orderReference, razorpayOrderId, onSuccess, onFailure, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSimulator, keyId, razorpayOrderId]);
 
   // When using standard Razorpay gateway, show a clean background overlay instead of simulator UI
   if (!isSimulator) {
