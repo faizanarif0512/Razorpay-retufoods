@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   ShoppingBag,
   Package,
-  CreditCard,
   LogOut,
   Search,
   CheckCircle2,
@@ -40,7 +39,7 @@ export default function AdminDashboardClient({
   adminEmail,
 }: AdminDashboardClientProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'payments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products'>('overview');
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>(initialOrders);
@@ -78,11 +77,6 @@ export default function AdminDashboardClient({
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
   const [editPricePaise, setEditPricePaise] = useState<number>(0);
   const [editStock, setEditStock] = useState<number>(0);
-
-  // Webhook Simulator State
-  const [simOrderId, setSimOrderId] = useState(initialOrders[0]?.razorpay_order_id || '');
-  const [simLoading, setSimLoading] = useState(false);
-  const [simOutput, setSimOutput] = useState<string | null>(null);
 
   const handleLogout = async () => {
     await fetch('/api/admin/logout', { method: 'POST' });
@@ -265,46 +259,6 @@ export default function AdminDashboardClient({
     }
   };
 
-  const handleSimulateWebhook = async (eventType: string) => {
-    setSimLoading(true);
-    setSimOutput(null);
-    try {
-      const simulatedEvent = {
-        event_id: `evt_test_${Date.now()}`,
-        event: eventType,
-        payload: {
-          payment: {
-            entity: {
-              id: `pay_sim_${Date.now()}`,
-              order_id: simOrderId,
-              status: eventType === 'payment.captured' ? 'captured' : 'failed',
-              amount: 54000,
-              currency: 'INR',
-              error_code: eventType === 'payment.failed' ? 'BAD_REQUEST_ERROR' : null,
-              error_description: eventType === 'payment.failed' ? 'Simulated bank decline' : null,
-            },
-          },
-        },
-      };
-
-      const res = await fetch('/api/webhooks/razorpay', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-razorpay-signature': 'simulated_test_sig',
-        },
-        body: JSON.stringify(simulatedEvent),
-      });
-      const data = await res.json();
-      setSimOutput(`Webhook Processed Response: ${JSON.stringify(data, null, 2)}`);
-      refreshOrders();
-    } catch (err: any) {
-      setSimOutput(`Webhook Failed: ${err.message}`);
-    } finally {
-      setSimLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-retu-warm-white/40 pb-16">
       
@@ -376,18 +330,6 @@ export default function AdminDashboardClient({
           >
             <Package className="w-4 h-4" />
             <span>Products & Inventory</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('payments')}
-            className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
-              activeTab === 'payments'
-                ? 'border-retu-charcoal text-retu-charcoal'
-                : 'border-transparent text-gray-400 hover:text-gray-700'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span>Razorpay Testing & Webhooks</span>
           </button>
         </div>
       </div>
@@ -1301,89 +1243,6 @@ export default function AdminDashboardClient({
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* ================= PAYMENTS & TESTING TAB ================= */}
-        {activeTab === 'payments' && (
-          <div className="space-y-6 max-w-3xl">
-            <div className="p-6 bg-white rounded-2xl border border-retu-border shadow-xs space-y-3">
-              <div className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-retu-pink" />
-                <h3 className="font-bold text-base text-retu-charcoal">Razorpay Integration & Testing Suite</h3>
-              </div>
-              <p className="text-xs text-gray-600 leading-relaxed">
-                Test the complete server-side payment lifecycle: Order generation, cryptographic signature verification, idempotency checks, and webhook event reconciliation.
-              </p>
-            </div>
-
-            {/* Webhook Simulator */}
-            <div className="p-6 bg-white rounded-2xl border border-retu-border shadow-xs space-y-4 text-xs">
-              <h4 className="font-bold text-sm text-gray-800">Simulate Razorpay Webhook Events</h4>
-              <p className="text-gray-500">
-                Send simulated webhook payloads to <code>/api/webhooks/razorpay</code> to test idempotency and auto-reconciliation of pending orders.
-              </p>
-
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Razorpay Order ID to target:</label>
-                <input
-                  type="text"
-                  placeholder="e.g. order_test_..."
-                  value={simOrderId}
-                  onChange={(e) => setSimOrderId(e.target.value)}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs"
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-3 pt-2">
-                <button
-                  onClick={() => handleSimulateWebhook('payment.captured')}
-                  disabled={simLoading || !simOrderId}
-                  className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Simulate payment.captured</span>
-                </button>
-
-                <button
-                  onClick={() => handleSimulateWebhook('payment.failed')}
-                  disabled={simLoading || !simOrderId}
-                  className="px-4 py-2.5 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  <span>Simulate payment.failed</span>
-                </button>
-              </div>
-
-              {simOutput && (
-                <pre className="p-4 bg-gray-900 text-emerald-400 rounded-xl overflow-x-auto text-[11px] font-mono mt-4">
-                  {simOutput}
-                </pre>
-              )}
-            </div>
-
-            {/* Checklist */}
-            <div className="p-6 bg-retu-warm-white rounded-2xl border border-retu-border space-y-3 text-xs text-gray-700">
-              <h4 className="font-bold text-sm text-retu-charcoal">Production Go-Live Checklist</h4>
-              <ul className="space-y-1.5">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Atomic concurrency-safe stock reservation implemented</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Server-side HMAC-SHA256 payment signature verification active</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Webhook event ID deduplication and idempotency active</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Automated tax invoice generation with registered legal company details</span>
-                </li>
-              </ul>
             </div>
           </div>
         )}
