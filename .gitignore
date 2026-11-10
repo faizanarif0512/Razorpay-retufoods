@@ -34,3 +34,6 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Brand website lives in its own repository
+squarespace-website/

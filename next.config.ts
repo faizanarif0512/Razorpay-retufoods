@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
     '/api/**/*': ['./node_modules/pdfkit/js/standard-fonts/**', './node_modules/pdfkit/js/data/**'],
   },
   poweredByHeader: false,
+  // Old Squarespace address for the home page
+  async redirects() {
+    return [{ source: '/home', destination: '/', permanent: true }];
+  },
   async headers() {
     return [
       {

@@ -1,0 +1,75 @@
+// Every Buy Now button opens the online store, which runs on this same site
+export const STORE_URL = '';
+
+export const storeLinks = {
+  store: `${STORE_URL}/store`,
+  mango: `${STORE_URL}/store/products/mibiotics-mango`,
+  lychee: `${STORE_URL}/store/products/mibiotics-lychee`,
+};
+
+export const navLinks = [
+  { href: '/science', label: 'The Science' },
+  { href: '/the-product', label: 'The Product' },
+  { href: '/microbiome', label: 'The Microbiome' },
+  { href: '/our-story', label: 'Our Story' },
+];
+
+export const img = {
+  logoBlack: '/img/retu_logo_black-da9f748d.webp',
+  logo: '/img/retu_logo-da9f748d.png',
+  linkedin: '/img/linkedin-25e0aa1d.png',
+  instagram: '/img/instagram-14f231f7.png',
+  foodtech500: '/img/logo-img2-fd2838d8.jpg',
+  mcFinalist: '/img/logo-img-abd6d107.jpg',
+  mibioticsLogo: '/img/mibiotics_logo_transparent-1c286241.webp',
+  heroLychee: '/img/chatgpt-image-jun-21-2026-10_11_49-pm-bc689640.webp',
+  bgPinkWave: '/img/chatgpt-image-jun-22-2026-08_45_44-am-b32a7dce.webp',
+  bgPinkWave2: '/img/chatgpt-image-jun-22-2026-08_45_44-am-34077829.png',
+  bgPinkWave3: '/img/chatgpt-image-jun-22-2026-08_45_44-am-863c5d4a.png',
+  bgScience: '/img/chatgpt-image-jun-22-2026-09_18_06-am-5599eaa7.webp',
+  bgSoft: '/img/chatgpt-image-jun-22-2026-01_26_51-pm-991fd360.webp',
+  bgSoft2: '/img/chatgpt-image-jun-22-2026-01_26_51-pm-944b7d55.png',
+  bgProduct: '/img/chatgpt-image-jun-22-2026-08_39_45-am-16d8e736.png',
+  bgClouds: '/img/chatgpt-image-jun-25-2026-01_49_23-pm-d9acf334.png',
+  bgClouds2: '/img/chatgpt-image-jun-25-2026-01_49_23-pm-02bd9cd1.png',
+  bgShake: '/img/chatgpt-image-jun-25-2026-01_47_08-pm-b664aa31.png',
+  bgWaitList: '/img/chatgpt-image-jun-25-2026-01_54_18-pm-f93d2170.png',
+  bgWhere: '/img/chatgpt-image-jun-22-2026-08_39_25-am-f64df017.png',
+  handRed: '/img/asset-24-6x-95e31746.webp',
+  founderMark: '/img/asset-5-6x-ae1165a0.webp',
+  armPink: '/img/asset-5-6x-75ee0d73.png',
+  blobPink: '/img/asset_10_transparent-7569cdf3.png',
+  blobPurple: '/img/asset_11_transparent-4caec552.png',
+  blobYellow: '/img/asset_9_transparent-d666b382.png',
+  dragonfly: '/img/asset_14_transparent-a60067cd.png',
+  dino: '/img/asset-25-6x-c2fff1ff.png',
+  palm: '/img/asset-6-6x-32020b35.png',
+  iconPatent: '/img/intellectual-property-5fb2295b.png',
+  iconApproval: '/img/approval-e055d7c7.png',
+  iconIngredient: '/img/ingredient-32ff215d.png',
+  factory: '/img/factory-4f065054.jpg',
+  mangoNutrition: '/img/mango-481d9066.png',
+  lycheeNutrition: '/img/lychee-495efa71.png',
+  mangoBottles: '/img/mibiotics-mango-render-1--4cd881f8.png',
+  lycheeBottles: '/img/mibiotics-render-f0247d38.jpg',
+  mangoLabel: '/img/mango-flavour-design_april-6e706438.png',
+  lycheeLabel: '/img/lychee-flavour-design_april-b63a54c7.png',
+  biotics: '/img/biotics-1e61c53f.png',
+  whatsIn: '/img/asset-18-6x-598b97dc.png',
+  whatsInArt: '/img/asset-4-6x-453efe26.png',
+  whatsInArt2: '/img/asset_15_transparent-d932a837.png',
+  patent: '/img/patent-2f789f35.png',
+  madeInIndia: '/img/made-in-india-badge-0ffb0b9c.png',
+  lgg: '/img/chr-hansen-lgg-logo-576a949e.png',
+  wellmune: '/img/wellmune-logo-3188ea20.webp',
+  amili: '/img/amili-validated-transparent-4114ef51.png',
+  magicMillet: '/img/magic-millet-0d34fb5e.png',
+  ritu: '/img/whatsapp-image-2026-06-23-at-12.53.03-am-60db8ffe.jpg',
+  ritiSign: '/img/asset-8-6x-8ed27fa5.png',
+};
+
+export const videos = {
+  founder: '/videos/founder.mp4',
+  recovery2021: '/videos/recovery-2021.mp4',
+  recoveryNow: '/videos/recovery-now.mp4',
+};
