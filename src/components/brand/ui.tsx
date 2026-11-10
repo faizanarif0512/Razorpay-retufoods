@@ -83,7 +83,8 @@ export function Section({
       className={`relative overflow-hidden bg-cover bg-center ${className}`}
       style={bg ? { backgroundImage: `url('${bg}')` } : undefined}
     >
-      <div className={`relative mx-auto max-w-6xl px-4 sm:px-8 py-10 sm:py-14 ${inner}`}>{children}</div>
+      {/* isolate: decorations (negative z-index) sit behind the content but above the section background */}
+      <div className={`relative isolate mx-auto max-w-6xl px-4 sm:px-8 py-10 sm:py-14 ${inner}`}>{children}</div>
     </section>
   );
 }
@@ -91,7 +92,7 @@ export function Section({
 // Decorative brand artwork positioned around a section
 export function Deco({ src, className }: { src: string; className: string }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img loading="lazy" decoding="async" src={src} alt="" aria-hidden className={`pointer-events-none absolute select-none ${className}`} />;
+  return <img loading="lazy" decoding="async" src={src} alt="" aria-hidden className={`pointer-events-none absolute -z-10 select-none ${className}`} />;
 }
 
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {

@@ -37,8 +37,8 @@ export default function HomePage() {
 
       {/* THE FOUNDER */}
       <Section bg={img.bgPinkWave}>
-        <Deco src={img.handRed} className="-left-6 bottom-10 hidden w-32 md:block" />
-        <Deco src={img.founderMark} className="-right-4 top-6 hidden w-28 md:block" />
+        <Deco src={img.handRed} className="-left-24 bottom-6 hidden w-28 xl:block" />
+        <Deco src={img.founderMark} className="-right-20 top-4 hidden w-24 xl:block" />
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <Video src={videos.founder} className="aspect-[4/3]" />
           <div>
