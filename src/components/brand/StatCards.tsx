@@ -74,7 +74,7 @@ export default function StatCards({ showIntro = true }: { showIntro?: boolean })
           </p>
         </>
       )}
-      <div className="mt-12 grid gap-6 text-left md:grid-cols-2">
+      <div className="mt-8 grid gap-6 text-left md:grid-cols-2">
         {stats.map((s) => (
           <Card key={s.tag} className={`${s.tint} border border-white p-8`}>
             <p className={`text-[11px] font-bold uppercase tracking-[0.12em] ${s.colour}`}>{s.tag}</p>

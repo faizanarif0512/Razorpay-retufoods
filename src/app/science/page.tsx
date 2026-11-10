@@ -33,10 +33,10 @@ export default function SciencePage() {
               <p>It secures the matrix in India for twenty years.</p>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img.madeInIndia} alt="Made in India" className="mt-8 h-20 w-auto" />
+            <img loading="lazy" decoding="async" src={img.madeInIndia} alt="Made in India" className="mt-8 h-20 w-auto" />
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img.patent} alt="Indian Patent No. 551921" className="w-full rounded-2xl shadow-lg" />
+          <img loading="lazy" decoding="async" src={img.patent} alt="Indian Patent No. 551921" className="w-full rounded-2xl shadow-lg" />
         </div>
       </Section>
 
@@ -49,10 +49,10 @@ export default function SciencePage() {
             available — the kind most brands pay a premium to use, and then never test beyond the supplier’s own data sheet.
           </p>
         </div>
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
           <Card className="p-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img.lgg} alt="Chr. Hansen LGG" className="h-16 w-auto" />
+            <img loading="lazy" decoding="async" src={img.lgg} alt="Chr. Hansen LGG" className="h-16 w-auto" />
             <p className="mt-6 font-semibold">LGG® — Lacticaseibacillus rhamnosus GG, from Chr. Hansen (now part of Novonesis).</p>
             <p className="mt-4 text-sm leading-relaxed">
               Chr. Hansen describes LGG® as the world’s most documented probiotic strain — supported by more than 2,000 scientific
@@ -62,7 +62,7 @@ export default function SciencePage() {
           </Card>
           <Card className="p-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img.wellmune} alt="Wellmune" className="h-16 w-auto" />
+            <img loading="lazy" decoding="async" src={img.wellmune} alt="Wellmune" className="h-16 w-auto" />
             <p className="mt-6 font-semibold">Wellmune® — baker’s-yeast beta 1,3/1,6 glucan, from Kerry.</p>
             <p className="mt-4 text-sm leading-relaxed">
               Kerry describes Wellmune® as the most clinically researched yeast beta-glucan of its kind, and the first ingredient
@@ -97,7 +97,7 @@ export default function SciencePage() {
       <Section bg={img.bgProduct}>
         <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.6fr]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img.amili} alt="AMILI validated" className="mx-auto w-full max-w-xs" />
+          <img loading="lazy" decoding="async" src={img.amili} alt="AMILI validated" className="mx-auto w-full max-w-xs" />
           <div>
             <Eyebrow>Testing</Eyebrow>
             <Heading lead="Who did the testing?" accent="AMILI" className="mt-4" />

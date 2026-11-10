@@ -33,7 +33,7 @@ export default function MicrobiomePage() {
         <Deco src={img.blobPurple} className="right-0 top-6 hidden w-28 md:block" />
         <Deco src={img.blobPink} className="-left-4 bottom-6 hidden w-20 md:block" />
         <Heading lead="What the gut microbiome" accent="actually does" className="text-center" />
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-8 grid gap-6 md:grid-cols-3">
           {roles.map((r) => (
             <Card key={r.title} className="p-8">
               <p className="font-bold text-brand-pink">{r.title}</p>
@@ -85,7 +85,7 @@ export default function MicrobiomePage() {
       <Section bg={img.bgClouds2}>
         <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.4fr]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img.magicMillet} alt="Millet" className="mx-auto w-full max-w-sm" />
+          <img loading="lazy" decoding="async" src={img.magicMillet} alt="Millet" className="mx-auto w-full max-w-sm" />
           <div>
             <Heading lead="Where millet" accent="comes in" />
             <p className="mt-6 text-[15px] leading-relaxed">

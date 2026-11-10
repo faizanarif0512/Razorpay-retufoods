@@ -10,7 +10,7 @@ export default function HomePage() {
     <>
       {/* HERO */}
       <section className="relative overflow-hidden">
-        <div className="grid min-h-[calc(100vh-5rem)] lg:grid-cols-[1fr_1.35fr]">
+        <div className="grid lg:min-h-[620px] lg:grid-cols-[1fr_1.35fr]">
           <div className="flex flex-col justify-center px-4 py-12 sm:px-10 lg:pl-[max(2rem,calc((100vw-1400px)/2+2rem))]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={img.mibioticsLogo} alt="mi-biotics" className="h-14 w-auto self-start sm:h-16" />
@@ -31,7 +31,7 @@ export default function HomePage() {
             </div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img.heroLychee} alt="mi-biotics Lychee gut shot" className="h-full min-h-[380px] w-full object-cover" />
+          <img src={img.heroLychee} alt="mi-biotics Lychee gut shot" className="h-full max-h-[680px] min-h-[340px] w-full object-cover" />
         </div>
       </section>
 
@@ -63,7 +63,7 @@ export default function HomePage() {
       <Section bg={img.bgScience} inner="text-center">
         <Eyebrow>The Science</Eyebrow>
         <Heading lead="Evidence," accent="not adjectives." className="mt-4" />
-        <div className="mt-12 grid gap-6 text-left md:grid-cols-3">
+        <div className="mt-8 grid gap-6 text-left md:grid-cols-3">
           {[
             {
               icon: img.iconPatent,
@@ -86,14 +86,14 @@ export default function HomePage() {
           ].map((c) => (
             <Card key={c.title} className="relative overflow-visible p-8 text-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={c.icon} alt="" className="mx-auto h-12 w-12" />
+              <img loading="lazy" decoding="async" src={c.icon} alt="" className="mx-auto h-12 w-12" />
               <p className="mt-5 text-[13px] font-bold uppercase tracking-[0.08em]">{c.title}</p>
               <p className="mt-4 text-sm leading-relaxed">{c.body}</p>
               <Deco src={c.blob} className="-bottom-6 -right-4 w-16" />
             </Card>
           ))}
         </div>
-        <Button href="/science" variant="outline" className="mt-12">
+        <Button href="/science" variant="outline" className="mt-8">
           The Full Science →
         </Button>
       </Section>
@@ -111,7 +111,7 @@ export default function HomePage() {
             </p>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img.factory} alt="The dedicated mi-biotics production line" className="h-full min-h-[300px] w-full object-cover" />
+          <img loading="lazy" decoding="async" src={img.factory} alt="The dedicated mi-biotics production line" className="h-full min-h-[300px] w-full object-cover" />
         </Card>
       </Section>
 
@@ -119,13 +119,13 @@ export default function HomePage() {
       <Section bg={img.bgPinkWave2} inner="text-center">
         <Eyebrow>The Recovery</Eyebrow>
         <Heading lead="Two videos, five years apart -" accent="the human truth" className="mt-4" />
-        <div className="relative mx-auto mt-12 grid max-w-3xl grid-cols-2 items-center gap-6 sm:gap-16">
-          <Video src={videos.recovery2021} className="aspect-[9/16]" />
-          <Video src={videos.recoveryNow} className="aspect-[9/16]" />
+        <div className="relative mx-auto mt-10 grid max-w-2xl grid-cols-2 items-center gap-6 sm:gap-20">
+          <Video src={videos.recovery2021} className="aspect-[4/5]" />
+          <Video src={videos.recoveryNow} className="aspect-[4/5]" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img.armPink} alt="" aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 hidden w-28 -translate-x-1/2 -translate-y-1/2 sm:block" />
+          <img loading="lazy" decoding="async" src={img.armPink} alt="" aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 hidden w-28 -translate-x-1/2 -translate-y-1/2 sm:block" />
         </div>
-        <div className="mx-auto mt-12 max-w-4xl space-y-5 text-left text-[15px] leading-relaxed">
+        <div className="mx-auto mt-10 max-w-4xl space-y-4 text-left text-[15px] leading-relaxed">
           <p>
             “In 2021, COVID-19 put me in intensive care for nineteen days. The drugs that saved my life also destroyed my gut —
             and my recovery had to start there, by rebuilding my microbiome from the inside out. My wife, Ritu, the inventor named
@@ -152,7 +152,7 @@ export default function HomePage() {
         <Eyebrow>The Ecosystem</Eyebrow>
         <Heading lead="Why the gut dictates" accent="everything.." className="mx-auto mt-4 max-w-2xl" />
         <StatCards />
-        <Button href="/microbiome" variant="outline" className="mt-12">
+        <Button href="/microbiome" variant="outline" className="mt-8">
           Learn More →
         </Button>
       </Section>

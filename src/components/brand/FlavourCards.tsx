@@ -11,11 +11,11 @@ const flavours = [
 export default function FlavourCards() {
   return (
     <>
-      <div className="mt-12 grid gap-8 md:grid-cols-2">
+      <div className="mt-8 grid gap-8 md:grid-cols-2">
         {flavours.map((f) => (
           <Card key={f.name} className="overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={f.image} alt={`mi-biotics ${f.name}`} className="aspect-[4/3] w-full object-cover" />
+            <img loading="lazy" decoding="async" src={f.image} alt={`mi-biotics ${f.name}`} className="aspect-[4/3] w-full object-cover" />
             <div className="p-6 sm:p-8">
               <h3 className="font-display text-2xl font-bold tracking-[0.1em]">{f.name}</h3>
               <p className="mt-3 text-sm leading-relaxed">
@@ -33,7 +33,7 @@ export default function FlavourCards() {
           </Card>
         ))}
       </div>
-      <p className="mx-auto mt-10 max-w-2xl text-center text-sm text-brand-purple">
+      <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-brand-purple">
         ( <strong>Coming Soon:</strong> Spicy Jeera — Carrot &amp; Pumpkin (Mixed Fruit &amp; Vegetable) — Matcha — Lemongrass
         &amp; Ginger — Pandan — Mixed Berry )
       </p>

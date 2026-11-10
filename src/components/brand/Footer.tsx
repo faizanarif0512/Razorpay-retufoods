@@ -11,18 +11,18 @@ export default function Footer() {
           <div className="mt-6 flex items-center gap-4">
             <a href="https://www.linkedin.com/company/retufoods/" aria-label="LinkedIn">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.linkedin} alt="" className="h-5 w-5" />
+              <img loading="lazy" decoding="async" src={img.linkedin} alt="" className="h-5 w-5" />
             </a>
             <a href="https://www.instagram.com/retufoods" aria-label="Instagram">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.instagram} alt="" className="h-5 w-5" />
+              <img loading="lazy" decoding="async" src={img.instagram} alt="" className="h-5 w-5" />
             </a>
           </div>
           <div className="mt-10 flex items-center gap-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img.foodtech500} alt="FoodTech 500" className="h-16 w-auto" />
+            <img loading="lazy" decoding="async" src={img.foodtech500} alt="FoodTech 500" className="h-16 w-auto" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={img.mcFinalist} alt="MassChallenge Finalist" className="h-16 w-auto" />
+            <img loading="lazy" decoding="async" src={img.mcFinalist} alt="MassChallenge Finalist" className="h-16 w-auto" />
           </div>
         </div>
 

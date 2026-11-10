@@ -59,7 +59,7 @@ export default function ProductPage() {
         <Deco src={img.whatsInArt2} className="-right-6 bottom-6 hidden w-32 md:block" />
         <div className="grid items-center gap-10 lg:grid-cols-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img.whatsInArt} alt="" className="mx-auto w-full max-w-md" />
+          <img loading="lazy" decoding="async" src={img.whatsInArt} alt="" className="mx-auto w-full max-w-md" />
           <div>
             <Heading lead="What’s in it — and" accent="what isn’t" />
             <p className="mt-6 text-[15px] leading-relaxed">

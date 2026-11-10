@@ -29,13 +29,13 @@ export default function FlavourPage({
           </Button>
           <div className="mt-10 grid gap-6 sm:grid-cols-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={packs} alt={`mi-biotics ${name} bottles`} className="w-full rounded-2xl object-cover sm:col-span-2" />
+            <img loading="lazy" decoding="async" src={packs} alt={`mi-biotics ${name} bottles`} className="w-full rounded-2xl object-cover sm:col-span-2" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={render} alt={`mi-biotics ${name} label design`} className="w-full rounded-2xl object-cover sm:col-span-2" />
+            <img loading="lazy" decoding="async" src={render} alt={`mi-biotics ${name} label design`} className="w-full rounded-2xl object-cover sm:col-span-2" />
           </div>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={nutrition} alt={`${name} nutritional facts`} className="w-full self-start rounded-2xl lg:sticky lg:top-28" />
+        <img loading="lazy" decoding="async" src={nutrition} alt={`${name} nutritional facts`} className="w-full self-start rounded-2xl lg:sticky lg:top-28" />
       </div>
     </Section>
   );

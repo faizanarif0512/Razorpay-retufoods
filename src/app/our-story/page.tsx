@@ -33,7 +33,7 @@ export default function OurStoryPage() {
             </p>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img.ritu} alt="Dr. Ritu Chhatwal" className="w-full rounded-2xl object-cover shadow-lg" />
+          <img loading="lazy" decoding="async" src={img.ritu} alt="Dr. Ritu Chhatwal" className="w-full rounded-2xl object-cover shadow-lg" />
         </div>
       </Section>
 

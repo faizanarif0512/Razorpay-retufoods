@@ -58,7 +58,7 @@ export const img = {
   whatsIn: '/img/asset-18-6x-598b97dc.png',
   whatsInArt: '/img/asset-4-6x-453efe26.png',
   whatsInArt2: '/img/asset_15_transparent-d932a837.png',
-  patent: '/img/patent-2f789f35.png',
+  patent: '/img/patent-2f789f35.webp',
   madeInIndia: '/img/made-in-india-badge-0ffb0b9c.png',
   lgg: '/img/chr-hansen-lgg-logo-576a949e.png',
   wellmune: '/img/wellmune-logo-3188ea20.webp',
