@@ -20,9 +20,17 @@ const nextConfig: NextConfig = {
     '/api/**/*': ['./node_modules/pdfkit/js/standard-fonts/**', './node_modules/pdfkit/js/data/**'],
   },
   poweredByHeader: false,
-  // Old Squarespace address for the home page
   async redirects() {
-    return [{ source: '/home', destination: '/', permanent: true }];
+    return [
+      // Old Squarespace address for the home page
+      { source: '/home', destination: '/', permanent: true },
+      // The brand pages replace the store's old info pages; /store itself is the shop
+      { source: '/store/science', destination: '/science', permanent: true },
+      { source: '/store/our-story', destination: '/our-story', permanent: true },
+      { source: '/store/microbiome', destination: '/microbiome', permanent: true },
+      { source: '/store/faq', destination: '/the-product', permanent: true },
+      { source: '/store/products', destination: '/store', permanent: true },
+    ];
   },
   async headers() {
     return [

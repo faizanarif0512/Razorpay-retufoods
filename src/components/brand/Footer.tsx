@@ -33,6 +33,12 @@ export default function Footer() {
             <li><Link href="/the-product" className="underline underline-offset-2">The Product</Link></li>
             <li><Link href="/microbiome" className="underline underline-offset-2">The Microbiome</Link></li>
           </ul>
+          <h3 className="mt-8 font-display text-xl font-bold tracking-[0.08em] text-brand-pink">Shop</h3>
+          <ul className="mt-4 space-y-3 text-sm">
+            <li><Link href="/store" className="underline underline-offset-2">Buy mi-biotics™</Link></li>
+            <li><Link href="/store/account/orders" className="underline underline-offset-2">My Orders</Link></li>
+            <li><Link href="/store/contact" className="underline underline-offset-2">Contact &amp; Support</Link></li>
+          </ul>
         </div>
 
         <div>

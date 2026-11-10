@@ -96,7 +96,7 @@ export default function CustomerAccountHub() {
 
           {/* Quick Nav: Shop */}
           <Link
-            href="/store/products"
+            href="/store"
             className="bg-white p-6 rounded-2xl border border-retu-border shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between"
           >
             <div>

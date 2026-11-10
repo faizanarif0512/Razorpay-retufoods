@@ -3,14 +3,34 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { ShoppingBag, User } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
 import { img, navLinks, storeLinks } from '@/lib/brand';
 
+// One header for the whole site: the Squarespace navigation plus the store's account and cart
 export default function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { itemCount, setIsCartOpen } = useCart();
+
+  const cartButton = (
+    <button
+      type="button"
+      onClick={() => setIsCartOpen(true)}
+      className="relative p-2 text-black hover:opacity-70"
+      aria-label="View shopping cart"
+    >
+      <ShoppingBag className="h-6 w-6" />
+      {itemCount > 0 && (
+        <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-pink text-[11px] font-bold text-white">
+          {itemCount}
+        </span>
+      )}
+    </button>
+  );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-neutral-100 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-neutral-100 bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 sm:h-20 sm:px-8">
         <Link href="/" aria-label="Retü home" onClick={() => setOpen(false)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -34,19 +54,26 @@ export default function Header() {
             >
               Join The Culture
             </Link>
-            <a
+            <Link
               href={storeLinks.store}
               className="rounded-md bg-brand-pink px-5 py-3 font-button text-[14px] font-medium text-white hover:bg-[#d01039]"
             >
               Buy Now
-            </a>
+            </Link>
+          </div>
+          <div className="flex items-center gap-1 border-l border-neutral-200 pl-4">
+            <Link href="/store/account" className="p-2 text-black hover:opacity-70" aria-label="My account and orders">
+              <User className="h-6 w-6" />
+            </Link>
+            {cartButton}
           </div>
         </nav>
 
-        <div className="flex items-center gap-2 lg:hidden">
-          <a href={storeLinks.store} className="rounded-md bg-brand-pink px-4 py-2 font-button text-[13px] font-medium text-white">
+        <div className="flex items-center gap-1 lg:hidden">
+          <Link href={storeLinks.store} className="mr-1 rounded-md bg-brand-pink px-4 py-2 font-button text-[13px] font-medium text-white">
             Buy Now
-          </a>
+          </Link>
+          {cartButton}
           <button
             type="button"
             aria-label={open ? 'Close menu' : 'Open menu'}
@@ -68,6 +95,9 @@ export default function Header() {
               {l.label}
             </Link>
           ))}
+          <Link href="/store/account" onClick={() => setOpen(false)} className="block py-3 text-lg text-black">
+            My Account &amp; Orders
+          </Link>
           <div className="mt-3 grid grid-cols-2 gap-3">
             <Link
               href="/the-wait-list"
@@ -76,9 +106,13 @@ export default function Header() {
             >
               Join The Culture
             </Link>
-            <a href={storeLinks.store} className="rounded-md bg-brand-pink py-3 text-center font-button text-sm font-medium text-white">
+            <Link
+              href={storeLinks.store}
+              onClick={() => setOpen(false)}
+              className="rounded-md bg-brand-pink py-3 text-center font-button text-sm font-medium text-white"
+            >
               Buy Now
-            </a>
+            </Link>
           </div>
         </nav>
       )}

@@ -73,7 +73,7 @@ export default function CartDrawer() {
                 Explore our clinically validated fermented millet gut shots and pick your daily routine.
               </p>
               <Link
-                href="/store/products"
+                href="/store"
                 onClick={() => setIsCartOpen(false)}
                 className="mt-6 px-6 py-2.5 bg-retu-charcoal text-white rounded-md text-xs font-semibold hover:bg-black transition-colors"
               >

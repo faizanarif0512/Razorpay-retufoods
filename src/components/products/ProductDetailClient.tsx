@@ -84,7 +84,7 @@ export default function ProductDetailClient({
       <nav className="text-xs text-gray-500 mb-8 flex items-center gap-2">
         <a href="/store" className="hover:text-retu-charcoal">Store</a>
         <span>/</span>
-        <a href="/store/products" className="hover:text-retu-charcoal">Products</a>
+        <a href="/store" className="hover:text-retu-charcoal">Shop</a>
         <span>/</span>
         <span className="text-retu-charcoal font-semibold">{product.name}</span>
       </nav>

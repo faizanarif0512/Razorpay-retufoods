@@ -493,7 +493,7 @@ export default function OrderHistoryPage() {
             </p>
             <div className="pt-2">
               <Link
-                href="/store/products"
+                href="/store"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-retu-charcoal text-white rounded-xl text-xs font-bold hover:bg-black transition-colors"
               >
                 <span>Shop mi-biotics™ Collection</span>

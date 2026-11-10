@@ -270,7 +270,7 @@ export default function CheckoutPage() {
         {/* Top Header */}
         <div className="mb-8 flex items-center justify-between">
           <Link
-            href="/store/products"
+            href="/store"
             className="inline-flex items-center gap-2 text-xs font-semibold text-gray-600 hover:text-retu-charcoal transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />

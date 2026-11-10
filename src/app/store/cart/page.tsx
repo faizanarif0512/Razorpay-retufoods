@@ -21,7 +21,7 @@ export default function CartPage() {
         {/* Title */}
         <div className="mb-8">
           <Link
-            href="/store/products"
+            href="/store"
             className="text-xs font-semibold text-gray-500 hover:text-retu-charcoal flex items-center gap-1 mb-2"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -42,7 +42,7 @@ export default function CartPage() {
               Browse our patented dairy-free fermented millet formulations and build your daily gut routine.
             </p>
             <Link
-              href="/store/products"
+              href="/store"
               className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-retu-charcoal text-white rounded-md text-xs font-bold hover:bg-black transition-colors"
             >
               <span>Browse Catalogue</span>

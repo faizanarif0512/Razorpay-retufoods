@@ -20,7 +20,7 @@ const config: Config = {
         retu: {
           charcoal: '#171717',
           dark: '#0F0F0F',
-          pink: '#F22552',
+          pink: '#EE1745',
           purple: '#B94E9F',
           grey: '#777777',
           'warm-white': '#F7F5F0',
