@@ -65,6 +65,8 @@ function CustomerLoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  // True once Google's own button has rendered; the Supabase redirect button is then only a fallback
+  const [gisReady, setGisReady] = useState(false);
 
   // Timer for OTP countdown
   useEffect(() => {
@@ -93,10 +95,11 @@ function CustomerLoginForm() {
             window.google.accounts.id.renderButton(buttonDiv, {
               theme: 'outline',
               size: 'large',
-              width: '100%',
+              width: Math.min(buttonDiv.offsetWidth || 360, 400),
               text: 'continue_with',
               shape: 'pill',
             });
+            setGisReady(true);
           }
         }
       };
@@ -341,8 +344,9 @@ function CustomerLoginForm() {
         {/* Option 1: Continue with Google (Only rendered if Google/Supabase credentials are configured) */}
         {Boolean(supabase) && (
           <div className="space-y-3 relative z-10">
-            <div id="googleSignInDiv" className="w-full"></div>
-            
+            <div id="googleSignInDiv" className="flex w-full justify-center"></div>
+
+            {!gisReady && (
             <button
               type="button"
               onClick={handleDirectGoogleLogin}
@@ -369,6 +373,7 @@ function CustomerLoginForm() {
               </svg>
               <span>Continue with Google</span>
             </button>
+            )}
 
             <div className="relative flex items-center justify-center my-4">
               <div className="border-t border-gray-200 w-full" />
