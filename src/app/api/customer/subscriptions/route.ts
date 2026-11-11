@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkPincode, NOT_SERVICEABLE_MESSAGE } from '@/lib/db/pincodes';
 import { getCustomerFromRequest } from '@/lib/auth/customer';
 import {
   getSubscriptionsByCustomer,
@@ -95,6 +96,10 @@ export async function POST(req: NextRequest) {
       }
       if (!/^\d{6}$/.test((a.postal_code || '').trim()) || (a.phone || '').replace(/\D/g, '').length < 10) {
         return NextResponse.json({ success: false, error: 'Valid PIN code and phone number are required' }, { status: 400 });
+      }
+      const pin = await checkPincode(a.postal_code);
+      if (!pin.serviceable) {
+        return NextResponse.json({ success: false, error: NOT_SERVICEABLE_MESSAGE }, { status: 400 });
       }
       return NextResponse.json({ success: true, subscription: await updateSubscriptionAddress(sub.id, a) });
     }

@@ -15,6 +15,7 @@ import {
   Edit2,
   Check,
   RefreshCw,
+  MapPin,
   Download,
   ShieldCheck,
   Send,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Order, Product } from '@/types';
 import AdminSubscriptionsPanel from './AdminSubscriptionsPanel';
+import AdminLocationsPanel from './AdminLocationsPanel';
 import { useOrderUpdates } from '@/lib/supabase/useOrderUpdates';
 
 interface AdminDashboardClientProps {
@@ -40,7 +42,7 @@ export default function AdminDashboardClient({
   adminEmail,
 }: AdminDashboardClientProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'subscriptions' | 'products'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'subscriptions' | 'products' | 'locations'>('overview');
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>(initialOrders);
@@ -344,6 +346,18 @@ export default function AdminDashboardClient({
             <Package className="w-4 h-4" />
             <span>Products & Inventory</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('locations')}
+            className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
+              activeTab === 'locations'
+                ? 'border-retu-charcoal text-retu-charcoal'
+                : 'border-transparent text-gray-400 hover:text-gray-700'
+            }`}
+          >
+            <MapPin className="w-4 h-4" />
+            <span>Location Settings</span>
+          </button>
         </div>
       </div>
 
@@ -361,6 +375,7 @@ export default function AdminDashboardClient({
         
         {/* ================= OVERVIEW TAB ================= */}
         {activeTab === 'subscriptions' && <AdminSubscriptionsPanel />}
+        {activeTab === 'locations' && <AdminLocationsPanel />}
 
         {activeTab === 'overview' && (
           <div className="space-y-8">

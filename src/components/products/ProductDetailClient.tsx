@@ -1,5 +1,6 @@
 'use client';
 
+import DeliveryChecker from '@/components/store/DeliveryChecker';
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -268,6 +269,8 @@ export default function ProductDetailClient({
               <span>Buy Now - Instant Checkout</span>
             </button>
           </div>
+
+          <DeliveryChecker />
 
           {/* Cold-Chain Dispatch Note */}
           <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-start gap-3 text-xs text-emerald-900">

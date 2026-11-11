@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Loader2, Snowflake, Truck, CalendarClock, CreditCard, AlertCircle } from 'lucide-react';
+import PincodeNotice from '@/components/store/PincodeNotice';
+import { INDIAN_STATES, usePincodeLookup } from '@/lib/pincodeClient';
 
 declare global {
   interface Window {
@@ -26,14 +28,6 @@ type Plan = {
 };
 
 const inr = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-
-const INDIAN_STATES = [
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh',
-  'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland',
-  'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand',
-  'West Bengal', 'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi',
-  'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
-];
 
 function loadRazorpay(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -87,6 +81,13 @@ export default function SubscribeClient() {
   }, []);
 
   const plan = plans.find((p) => p.id === selected);
+  const pinStatus = usePincodeLookup(form.postal_code);
+  useEffect(() => {
+    if (pinStatus.state === 'ok' || pinStatus.state === 'unavailable') {
+      setForm((f) => ({ ...f, city: pinStatus.city, state: pinStatus.region }));
+    }
+  }, [pinStatus]);
+  const pinBlocked = pinStatus.state === 'unavailable' || pinStatus.state === 'invalid';
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -271,7 +272,10 @@ export default function SubscribeClient() {
                 <Field label="Address line 2 (optional)" value={form.address_line2} onChange={set('address_line2')} />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="City" value={form.city} onChange={set('city')} required />
-                  <Field label="PIN code" value={form.postal_code} onChange={set('postal_code')} required inputMode="numeric" maxLength={6} />
+                  <div>
+                    <Field label="PIN code" value={form.postal_code} onChange={set('postal_code')} required inputMode="numeric" maxLength={6} />
+                    <PincodeNotice status={pinStatus} />
+                  </div>
                 </div>
                 <label className="block">
                   <span className="text-sm font-semibold">State</span>
@@ -297,7 +301,7 @@ export default function SubscribeClient() {
 
                 <button
                   type="submit"
-                  disabled={submitting || !plan?.in_stock}
+                  disabled={submitting || !plan?.in_stock || pinBlocked}
                   className="flex w-full items-center justify-center gap-2 rounded-md bg-brand-pink py-3.5 font-button text-sm font-medium text-white hover:bg-[#d01039] disabled:opacity-60"
                 >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}

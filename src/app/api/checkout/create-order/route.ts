@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkPincode, NOT_SERVICEABLE_MESSAGE } from '@/lib/db/pincodes';
 import {
   createOrderWithReservation,
   attachRazorpayOrderId,
@@ -124,6 +125,15 @@ export async function POST(req: NextRequest) {
         postal_code: shipping_postal_code,
         phone: customer_phone,
       });
+    }
+
+    // Delivery area: only PIN codes switched on in Admin → Location Settings
+    const pin = await checkPincode(shipping_postal_code);
+    if (!pin.serviceable) {
+      return NextResponse.json(
+        { success: false, notServiceable: true, error: pin.valid ? NOT_SERVICEABLE_MESSAGE : 'This PIN code doesn’t look right. Please check it.' },
+        { status: 400 }
+      );
     }
 
     // Launch pricing rule: one-off purchases are a single trial six-pack for first-time buyers only.

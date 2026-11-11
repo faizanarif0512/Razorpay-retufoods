@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { ShieldCheck, ArrowLeft, Lock, Loader2, AlertCircle, User, CheckCircle2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import RazorpayPaymentModal from '@/components/checkout/RazorpayPaymentModal';
+import PincodeNotice from '@/components/store/PincodeNotice';
+import { INDIAN_STATES, usePincodeLookup } from '@/lib/pincodeClient';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -45,6 +47,13 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   // Returning customers can't buy one-off packs; point them to the subscription plans
   const [needsSubscription, setNeedsSubscription] = useState(false);
+  const pinStatus = usePincodeLookup(formData.shipping_postal_code);
+  // Fill city and state from the PIN directory once a valid PIN is entered
+  useEffect(() => {
+    if (pinStatus.state === 'ok' || pinStatus.state === 'unavailable') {
+      setFormData((prev) => ({ ...prev, shipping_city: prev.shipping_city || pinStatus.city, shipping_state: pinStatus.region }));
+    }
+  }, [pinStatus]);
   const isPaymentProcessingRef = React.useRef(false);
 
   // Active Razorpay Modal State
@@ -110,6 +119,10 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (items.length === 0) {
       setError('Your shopping cart is empty');
+      return;
+    }
+    if (pinStatus.state === 'unavailable' || pinStatus.state === 'invalid') {
+      setError('We can only deliver to the PIN codes we currently serve. Please check your PIN code.');
       return;
     }
 
@@ -490,16 +503,9 @@ export default function CheckoutPage() {
                       onChange={handleInputChange}
                       className="w-full px-3.5 py-2.5 bg-gray-50 border border-retu-border rounded-lg text-xs text-retu-charcoal focus:bg-white focus:outline-none focus:border-retu-charcoal transition-colors"
                     >
-                      <option value="Karnataka">Karnataka</option>
-                      <option value="Tamil Nadu">Tamil Nadu</option>
-                      <option value="Maharashtra">Maharashtra</option>
-                      <option value="Delhi">Delhi</option>
-                      <option value="Telangana">Telangana</option>
-                      <option value="Kerala">Kerala</option>
-                      <option value="Gujarat">Gujarat</option>
-                      <option value="Andhra Pradesh">Andhra Pradesh</option>
-                      <option value="Haryana">Haryana</option>
-                      <option value="West Bengal">West Bengal</option>
+                      {INDIAN_STATES.map((st) => (
+                        <option key={st} value={st}>{st}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -515,6 +521,7 @@ export default function CheckoutPage() {
                       onChange={handleInputChange}
                       className="w-full px-3.5 py-2.5 bg-gray-50 border border-retu-border rounded-lg text-xs text-retu-charcoal focus:bg-white focus:outline-none focus:border-retu-charcoal transition-colors"
                     />
+                    <PincodeNotice status={pinStatus} />
                   </div>
 
                   <div>

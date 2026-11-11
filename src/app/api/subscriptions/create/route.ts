@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkPincode, NOT_SERVICEABLE_MESSAGE } from '@/lib/db/pincodes';
 import { getCustomerFromRequest } from '@/lib/auth/customer';
 import { updateCustomerProfile } from '@/lib/db/service';
 import { getPlanById, createPendingSubscription, cycleTotalPaise, hasLiveSubscription } from '@/lib/db/subscriptions';
@@ -25,6 +26,14 @@ export async function POST(req: NextRequest) {
     }
     if (!/^\d{6}$/.test((postal_code || '').trim())) {
       return NextResponse.json({ success: false, error: 'Valid 6-digit PIN code is required' }, { status: 400 });
+    }
+
+    const pin = await checkPincode(postal_code);
+    if (!pin.serviceable) {
+      return NextResponse.json(
+        { success: false, notServiceable: true, error: pin.valid ? NOT_SERVICEABLE_MESSAGE : 'This PIN code doesn’t look right. Please check it.' },
+        { status: 400 }
+      );
     }
 
     const plan = await getPlanById(plan_id);
