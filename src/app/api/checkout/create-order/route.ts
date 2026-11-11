@@ -10,6 +10,8 @@ import {
 import { createRazorpayOrder } from '@/lib/payments/razorpay';
 import { getCustomerFromRequest, createCustomerToken, COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '@/lib/auth/customer';
 import { sendCustomerWelcomeEmail } from '@/lib/notifications/email';
+import { isFirstTimeBuyer } from '@/lib/db/subscriptions';
+import { getSupabase } from '@/lib/db/supabase';
 
 export async function POST(req: NextRequest) {
   try {
@@ -124,6 +126,34 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Launch pricing rule: one-off purchases are a single trial six-pack for first-time buyers only.
+    // Everyone else buys through a subscription (/store/subscribe).
+    const firstTime = await isFirstTimeBuyer({ customerId: customer.id, email: normalizedEmail, phone: customer_phone });
+    if (!firstTime) {
+      return NextResponse.json(
+        {
+          success: false,
+          requiresSubscription: true,
+          error: 'You’ve already enjoyed your trial six-pack. Continue your gut-health routine with a 2-week or 4-week subscription.',
+        },
+        { status: 403 }
+      );
+    }
+    const totalUnits = (items as { quantity: number }[]).reduce((n, i) => n + Number(i.quantity || 0), 0);
+    const { data: cartVariants } = await getSupabase()
+      .from('product_variants')
+      .select('id, pack_size')
+      .in('id', (items as { variant_id: string }[]).map((i) => i.variant_id));
+    if (totalUnits !== 1 || !cartVariants || cartVariants.length !== 1 || cartVariants[0].pack_size !== 6) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'First-time buyers can try one six-pack. For more, choose a 2-week or 4-week subscription.',
+        },
+        { status: 400 }
+      );
+    }
+
     // 1. Create order and reserve stock server-side with customer_id
     const { order, razorpayAmountPaise } = await createOrderWithReservation({
       customer_id: customer.id,
@@ -138,6 +168,7 @@ export async function POST(req: NextRequest) {
       shipping_country: shipping_country?.trim() || 'India',
       items,
       notes,
+      order_type: 'trial',
     });
 
     // 2. Create Razorpay order on server

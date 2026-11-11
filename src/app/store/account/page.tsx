@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { User, Package, MapPin, LogOut, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
+import { User, Package, MapPin, LogOut, ArrowRight, Loader2, ShieldCheck, CalendarClock } from 'lucide-react';
 
 export default function CustomerAccountHub() {
   const router = useRouter();
@@ -72,6 +72,28 @@ export default function CustomerAccountHub() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
+          {/* Quick Nav: Subscriptions */}
+          <Link
+            href="/store/account/subscriptions"
+            className="bg-white p-6 rounded-2xl border border-retu-border shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-retu-pink/10 text-retu-pink flex items-center justify-center mb-4">
+                <CalendarClock className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold text-retu-charcoal group-hover:text-retu-pink transition-colors">
+                My Subscriptions
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Pause, change your delivery address or cancel your plan.
+              </p>
+            </div>
+            <div className="pt-4 flex items-center gap-1 text-xs font-bold text-retu-charcoal group-hover:text-retu-pink transition-colors">
+              <span>Manage subscriptions</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </Link>
+
           {/* Quick Nav: Orders */}
           <Link
             href="/store/account/orders"

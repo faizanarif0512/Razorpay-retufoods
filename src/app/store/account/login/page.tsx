@@ -30,10 +30,23 @@ declare global {
 function CustomerLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/store/account/orders';
+  // Google sign-in leaves the site and returns here without the query string, so the
+  // destination is also kept in sessionStorage. Only same-site paths are accepted.
+  const safePath = (p: string | null) => (p && p.startsWith('/') && !p.startsWith('//') ? p : null);
+  const redirect = safePath(searchParams.get('redirect')) || '/store/account/orders';
+  const goAfterLogin = () => {
+    let stored: string | null = null;
+    try {
+      stored = sessionStorage.getItem('retu_after_login');
+      sessionStorage.removeItem('retu_after_login');
+    } catch {}
+    const target = safePath(searchParams.get('redirect')) || safePath(stored) || redirect;
+    router.push(target);
+    router.refresh();
+  };
 
   // Mode: 'phone' | 'email'
-  const [activeTab, setActiveTab] = useState<'phone' | 'email'>('phone');
+  const [activeTab, setActiveTab] = useState<'phone' | 'email'>('email');
 
   // Email form state
   const [email, setEmail] = useState('');
@@ -123,8 +136,7 @@ function CustomerLoginForm() {
       await exchangeSupabaseSession('/api/customer/google', data.session.access_token);
       setSuccessMsg('Signed in with Google successfully!');
       setTimeout(() => {
-        router.push(redirect);
-        router.refresh();
+        goAfterLogin();
       }, 500);
     } catch (err: any) {
       setError(err.message || 'Google sign-in error');
@@ -154,8 +166,7 @@ function CustomerLoginForm() {
         const data = await exchangeSupabaseSession('/api/customer/google', session.access_token);
         setSuccessMsg(`Welcome, ${data.customer.name}!`);
         setTimeout(() => {
-          router.push(redirect);
-          router.refresh();
+          goAfterLogin();
         }, 500);
       } catch (err: any) {
         setError(err.message || 'Google sign-in error');
@@ -179,6 +190,9 @@ function CustomerLoginForm() {
     }
     try {
       setLoading(true);
+      try {
+        sessionStorage.setItem('retu_after_login', redirect);
+      } catch {}
       await signInWithGoogle();
     } catch (err: any) {
       setError(err.message || 'Failed to sign in with Google');
@@ -239,8 +253,7 @@ function CustomerLoginForm() {
 
       setSuccessMsg('Phone verified successfully! Redirecting...');
       setTimeout(() => {
-        router.push(redirect);
-        router.refresh();
+        goAfterLogin();
       }, 500);
     } catch (err: any) {
       setError(err.message || 'Verification failed. Please check code.');
@@ -274,8 +287,7 @@ function CustomerLoginForm() {
 
       setSuccessMsg('Login successful! Redirecting to your account...');
       setTimeout(() => {
-        router.push(redirect);
-        router.refresh();
+        goAfterLogin();
       }, 500);
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');

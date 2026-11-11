@@ -37,6 +37,8 @@ export default function Footer() {
           <ul className="mt-4 space-y-3 text-sm">
             <li><Link href="/store" className="underline underline-offset-2">Buy mi-biotics™</Link></li>
             <li><Link href="/store/account/orders" className="underline underline-offset-2">My Orders</Link></li>
+            <li><Link href="/store/account/subscriptions" className="underline underline-offset-2">My Subscriptions</Link></li>
+            <li><Link href="/refund-policy" className="underline underline-offset-2">Refund &amp; Cancellation Policy</Link></li>
             <li><Link href="/store/contact" className="underline underline-offset-2">Contact &amp; Support</Link></li>
           </ul>
         </div>

@@ -12,7 +12,88 @@ import {
   getRefundByRazorpayRefundId,
 } from '@/lib/db/service';
 import { verifyWebhookSignature } from '@/lib/payments/razorpay';
-import { sendOrderPaidEmails, sendOrderRefundedEmails } from '@/lib/notifications/email';
+import {
+  sendOrderPaidEmails,
+  sendOrderRefundedEmails,
+  sendSubscriptionPaymentFailedEmails,
+  sendSubscriptionCancelledEmail,
+} from '@/lib/notifications/email';
+import {
+  getSubscriptionByRazorpayId,
+  syncSubscriptionFromRazorpay,
+  createSubscriptionCycleOrder,
+  markSubscriptionPaymentFailed,
+  cycleTotalPaise,
+} from '@/lib/db/subscriptions';
+
+// Razorpay subscription lifecycle. Each subscription.charged is one billing cycle and creates
+// exactly one order (keyed on the payment id, so retries and the checkout callback can't duplicate it).
+async function handleSubscriptionEvent(eventType: string, event: any) {
+  const entity = event.payload?.subscription?.entity;
+  const payment = event.payload?.payment?.entity;
+  if (!entity?.id) return;
+
+  const sub = await getSubscriptionByRazorpayId(entity.id);
+  if (!sub) {
+    console.warn('[WEBHOOK] subscription not found:', entity.id);
+    return;
+  }
+  const emailInfo = {
+    customer_name: sub.customer_name,
+    customer_email: sub.customer_email,
+    planName: sub.plan?.name || 'subscription',
+    cycleTotalPaise: sub.plan ? cycleTotalPaise(sub.plan) : payment?.amount || 0,
+    nextChargeAt: sub.next_charge_at,
+  };
+
+  switch (eventType) {
+    case 'subscription.charged': {
+      const synced = await syncSubscriptionFromRazorpay(sub, entity, 'active');
+      if (payment?.id) {
+        const { order, created } = await createSubscriptionCycleOrder(synced, payment.id, payment.amount);
+        if (created) {
+          const invoice = await getInvoiceByOrderId(order.id);
+          sendOrderPaidEmails(order, invoice?.invoice_number || 'INV-PENDING').catch(console.error);
+        }
+      }
+      break;
+    }
+    case 'subscription.pending':
+    case 'subscription.halted': {
+      const halted = eventType === 'subscription.halted';
+      const reason = payment?.error_description || (halted ? 'All payment retries failed' : 'Payment attempt failed; Razorpay is retrying');
+      await syncSubscriptionFromRazorpay(sub, entity);
+      await markSubscriptionPaymentFailed(sub, halted ? 'halted' : 'pending', reason);
+      sendSubscriptionPaymentFailedEmails({ ...emailInfo, reason, halted }).catch(console.error);
+      break;
+    }
+    case 'subscription.cancelled': {
+      const wasLive = !['cancelled', 'completed', 'expired'].includes(sub.status);
+      await syncSubscriptionFromRazorpay(sub, entity, 'cancelled');
+      // Customer-initiated cancels already emailed; this covers cancels from the Razorpay dashboard
+      if (wasLive && !sub.cancel_at_cycle_end) sendSubscriptionCancelledEmail({ ...emailInfo, atCycleEnd: false }).catch(console.error);
+      break;
+    }
+    case 'subscription.authenticated':
+    case 'subscription.activated':
+    case 'subscription.paused':
+    case 'subscription.resumed':
+    case 'subscription.completed':
+    case 'subscription.updated': {
+      const statusFor: Record<string, any> = {
+        'subscription.authenticated': 'authenticated',
+        'subscription.activated': 'active',
+        'subscription.paused': 'paused',
+        'subscription.resumed': 'active',
+        'subscription.completed': 'completed',
+      };
+      // Never move a subscription that already started backwards to "authenticated"
+      const override = eventType === 'subscription.authenticated' && sub.status !== 'created' ? undefined : statusFor[eventType];
+      await syncSubscriptionFromRazorpay(sub, entity, override);
+      break;
+    }
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,7 +124,9 @@ export async function POST(req: NextRequest) {
     await recordWebhookEvent(eventId, eventType, event);
 
     // Process event
-    if (eventType === 'payment.captured' || eventType === 'order.paid') {
+    if (typeof eventType === 'string' && eventType.startsWith('subscription.')) {
+      await handleSubscriptionEvent(eventType, event);
+    } else if (eventType === 'payment.captured' || eventType === 'order.paid') {
       const paymentEntity = event.payload?.payment?.entity;
       const orderEntity = event.payload?.order?.entity;
       const razorpayOrderId = paymentEntity?.order_id || orderEntity?.id;

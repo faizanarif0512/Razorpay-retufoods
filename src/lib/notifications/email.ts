@@ -908,3 +908,101 @@ Customer Care: faizan.loyola@gmail.com | 011-69269668
 }
 
 
+
+// --- SUBSCRIPTION EMAILS ---
+type SubscriptionEmailInfo = {
+  customer_name: string;
+  customer_email: string;
+  planName: string;
+  cycleTotalPaise: number;
+  nextChargeAt?: string | null;
+};
+
+const inr = (paise: number) => `₹${(paise / 100).toFixed(2)}`;
+const niceDate = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'your next billing date';
+
+function subscriptionEmailShell(title: string, bodyHtml: string, ctaLabel: string, ctaUrl: string) {
+  return `<!DOCTYPE html><html><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #171717; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="border-bottom: 2px solid #171717; padding-bottom: 12px; margin-bottom: 24px;">
+      <h2 style="color: #171717; margin: 0;">Retü Foods: mi-biotics™</h2>
+      <p style="margin: 4px 0 0; color: #777777; font-size: 14px;">${title}</p>
+    </div>
+    ${bodyHtml}
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${ctaUrl}" style="background-color: #EE1745; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">${ctaLabel}</a>
+    </div>
+    <p style="font-size: 13px; color: #777777; margin-top: 32px; border-top: 1px solid #EAEAEA; padding-top: 16px;">
+      Questions? Email <a href="mailto:restoreme@retufoods.com">restoreme@retufoods.com</a>.<br/>DancingEarth Food Private Limited, Bengaluru.
+    </p>
+  </body></html>`;
+}
+
+export async function sendSubscriptionStartedEmail(info: SubscriptionEmailInfo): Promise<void> {
+  const storeUrl = process.env.NEXT_PUBLIC_STORE_URL || 'http://localhost:3000';
+  const manageUrl = `${storeUrl}/store/account/subscriptions`;
+  const html = subscriptionEmailShell(
+    'Your subscription is active',
+    `<p>Dear <strong>${info.customer_name}</strong>,</p>
+     <p>Welcome to the Culture! Your <strong>${info.planName}</strong> is now active at <strong>${inr(info.cycleTotalPaise)}</strong> per delivery.</p>
+     <p>Your first box is being prepared. Each billing cycle we charge your saved payment method and send one shipment. Your next charge is on <strong>${niceDate(info.nextChargeAt)}</strong>.</p>
+     <p style="font-size: 13px; color: #555555;">You can pause, update your delivery address or cancel any time from your account.</p>`,
+    'Manage my subscription',
+    manageUrl
+  );
+  await sendTransactionalEmail({
+    to: info.customer_email,
+    subject: `Your ${info.planName} is active - Retü Foods`,
+    html,
+    text: `Dear ${info.customer_name},\n\nYour ${info.planName} is active at ${inr(info.cycleTotalPaise)} per delivery. Next charge: ${niceDate(info.nextChargeAt)}.\n\nManage it here: ${manageUrl}\n\nRetü Foods`,
+  });
+}
+
+export async function sendSubscriptionPaymentFailedEmails(info: SubscriptionEmailInfo & { reason: string; halted: boolean }): Promise<void> {
+  const storeUrl = process.env.NEXT_PUBLIC_STORE_URL || 'http://localhost:3000';
+  const manageUrl = `${storeUrl}/store/account/subscriptions`;
+  const next = info.halted
+    ? 'Razorpay has stopped retrying, so your deliveries are on hold until the payment goes through.'
+    : 'Razorpay will automatically retry the payment over the next few days. Your next box ships once it succeeds.';
+  const html = subscriptionEmailShell(
+    'We couldn’t take your subscription payment',
+    `<p>Dear <strong>${info.customer_name}</strong>,</p>
+     <p>Your payment of <strong>${inr(info.cycleTotalPaise)}</strong> for your <strong>${info.planName}</strong> didn’t go through.</p>
+     <p>${next}</p>
+     <p>Please check that your UPI AutoPay mandate or card is still active and has enough balance. You can also restart the subscription from your account.</p>`,
+    'Check my subscription',
+    manageUrl
+  );
+  await sendTransactionalEmail({
+    to: info.customer_email,
+    subject: `Action needed: subscription payment failed - Retü Foods`,
+    html,
+    text: `Dear ${info.customer_name},\n\nYour payment of ${inr(info.cycleTotalPaise)} for your ${info.planName} didn't go through. ${next}\n\nCheck your subscription: ${manageUrl}\n\nRetü Foods`,
+  });
+
+  const adminEmail = process.env.EMAIL_ADMIN_NOTIFY || 'faizan.loyola@gmail.com';
+  await sendTransactionalEmail({
+    to: adminEmail,
+    subject: `[Subscription ${info.halted ? 'HALTED' : 'payment failed'}] ${info.customer_name} - ${info.planName}`,
+    html: `<p><strong>${info.customer_name}</strong> (${info.customer_email}) — ${info.planName}, ${inr(info.cycleTotalPaise)}.</p><p>Status: <strong>${info.halted ? 'Halted — no more retries, no orders will be created' : 'Retrying'}</strong></p><p>Reason: ${info.reason}</p><p>See Admin → Subscriptions.</p>`,
+    text: `${info.customer_name} (${info.customer_email}) - ${info.planName}: ${info.halted ? 'HALTED' : 'payment failed, retrying'}. Reason: ${info.reason}`,
+  });
+}
+
+export async function sendSubscriptionCancelledEmail(info: SubscriptionEmailInfo & { atCycleEnd: boolean }): Promise<void> {
+  const storeUrl = process.env.NEXT_PUBLIC_STORE_URL || 'http://localhost:3000';
+  const html = subscriptionEmailShell(
+    'Your subscription has been cancelled',
+    `<p>Dear <strong>${info.customer_name}</strong>,</p>
+     <p>Your <strong>${info.planName}</strong> has been cancelled${info.atCycleEnd ? ` and will end after your current cycle (${niceDate(info.nextChargeAt)})` : ''}. You won’t be charged again.</p>
+     <p>We’d love to have you back whenever you’re ready.</p>`,
+    'Visit the store',
+    `${storeUrl}/store`
+  );
+  await sendTransactionalEmail({
+    to: info.customer_email,
+    subject: `Your subscription has been cancelled - Retü Foods`,
+    html,
+    text: `Dear ${info.customer_name},\n\nYour ${info.planName} has been cancelled. You won't be charged again.\n\nRetü Foods`,
+  });
+}

@@ -188,6 +188,7 @@ export interface CreateOrderInput {
   shipping_country?: string;
   items: { variant_id: string; quantity: number }[];
   notes?: string;
+  order_type?: 'one_time' | 'trial';
 }
 
 export async function createOrderWithReservation(input: CreateOrderInput): Promise<{ order: Order; razorpayAmountPaise: number }> {
@@ -222,6 +223,9 @@ export async function createOrderWithReservation(input: CreateOrderInput): Promi
     fulfilment_status: 'pending',
     notes: input.notes?.trim() || null,
     stock_restored: false,
+    // jsonb_populate_record ignores column defaults, so every NOT NULL column must be set here
+    order_type: input.order_type || 'one_time',
+    subscription_id: null,
     created_at: now,
     updated_at: now,
   };

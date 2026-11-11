@@ -37,3 +37,6 @@ Thumbs.db
 
 # Brand website lives in its own repository
 squarespace-website/
+
+# Client correspondence, not part of the site
+client-docs/

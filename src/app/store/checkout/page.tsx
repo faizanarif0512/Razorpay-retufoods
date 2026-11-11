@@ -43,6 +43,8 @@ export default function CheckoutPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Returning customers can't buy one-off packs; point them to the subscription plans
+  const [needsSubscription, setNeedsSubscription] = useState(false);
   const isPaymentProcessingRef = React.useRef(false);
 
   // Active Razorpay Modal State
@@ -136,6 +138,7 @@ export default function CheckoutPage() {
         if (data.requiresLogin) {
           setIsExistingAccount(true);
         }
+        setNeedsSubscription(!!data.requiresSubscription);
         throw new Error(data.error || 'Failed to create order');
       }
 
@@ -352,6 +355,11 @@ export default function CheckoutPage() {
                 <div className="flex-1">
                   <p className="font-bold">Checkout Notice</p>
                   <p className="mt-0.5">{error}</p>
+                  {needsSubscription && (
+                    <a href="/store/subscribe" className="mt-2 inline-block rounded-md bg-retu-pink px-3 py-1.5 font-bold text-white">
+                      See subscription plans →
+                    </a>
+                  )}
                 </div>
               </div>
             )}

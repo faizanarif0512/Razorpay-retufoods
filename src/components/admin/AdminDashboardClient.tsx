@@ -23,6 +23,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Order, Product } from '@/types';
+import AdminSubscriptionsPanel from './AdminSubscriptionsPanel';
 import { useOrderUpdates } from '@/lib/supabase/useOrderUpdates';
 
 interface AdminDashboardClientProps {
@@ -39,7 +40,7 @@ export default function AdminDashboardClient({
   adminEmail,
 }: AdminDashboardClientProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'subscriptions' | 'products'>('overview');
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>(initialOrders);
@@ -321,6 +322,18 @@ export default function AdminDashboardClient({
           </button>
 
           <button
+            onClick={() => setActiveTab('subscriptions')}
+            className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
+              activeTab === 'subscriptions'
+                ? 'border-retu-charcoal text-retu-charcoal'
+                : 'border-transparent text-gray-400 hover:text-gray-700'
+            }`}
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Subscriptions</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('products')}
             className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
               activeTab === 'products'
@@ -347,6 +360,8 @@ export default function AdminDashboardClient({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         
         {/* ================= OVERVIEW TAB ================= */}
+        {activeTab === 'subscriptions' && <AdminSubscriptionsPanel />}
+
         {activeTab === 'overview' && (
           <div className="space-y-8">
             

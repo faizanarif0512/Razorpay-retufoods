@@ -167,6 +167,83 @@ export function verifyPaymentSignature(params: {
   return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
 }
 
+// --- SUBSCRIPTIONS ---
+
+// Razorpay plans are immutable, so a plan is (re)created whenever our price changes
+export async function createRazorpayPlan(params: {
+  intervalWeeks: number;
+  amountPaise: number;
+  name: string;
+  description: string;
+}): Promise<string> {
+  const client = getRazorpayClient();
+  if (!client) return `plan_sim_${Date.now()}`;
+  const plan: any = await (client.plans as any).create({
+    period: 'weekly',
+    interval: params.intervalWeeks,
+    item: { name: params.name, amount: params.amountPaise, currency: 'INR', description: params.description },
+  });
+  return plan.id;
+}
+
+export async function createRazorpaySubscription(params: {
+  planId: string;
+  totalCount: number;
+  notes: Record<string, string>;
+}): Promise<{ id: string; isSimulator: boolean }> {
+  const client = getRazorpayClient();
+  if (!client) return { id: `sub_sim_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`, isSimulator: true };
+  const sub: any = await (client.subscriptions as any).create({
+    plan_id: params.planId,
+    total_count: params.totalCount,
+    quantity: 1,
+    customer_notify: 1,
+    notes: params.notes,
+  });
+  return { id: sub.id, isSimulator: false };
+}
+
+export async function fetchRazorpaySubscription(subscriptionId: string): Promise<any | null> {
+  const client = getRazorpayClient();
+  if (!client || subscriptionId.startsWith('sub_sim_')) return null;
+  return (client.subscriptions as any).fetch(subscriptionId);
+}
+
+export async function cancelRazorpaySubscription(subscriptionId: string, atCycleEnd: boolean): Promise<void> {
+  const client = getRazorpayClient();
+  if (!client || subscriptionId.startsWith('sub_sim_')) return;
+  await (client.subscriptions as any).cancel(subscriptionId, atCycleEnd);
+}
+
+export async function pauseRazorpaySubscription(subscriptionId: string): Promise<void> {
+  const client = getRazorpayClient();
+  if (!client || subscriptionId.startsWith('sub_sim_')) return;
+  await (client.subscriptions as any).pause(subscriptionId, { pause_at: 'now' });
+}
+
+export async function resumeRazorpaySubscription(subscriptionId: string): Promise<void> {
+  const client = getRazorpayClient();
+  if (!client || subscriptionId.startsWith('sub_sim_')) return;
+  await (client.subscriptions as any).resume(subscriptionId, { resume_at: 'now' });
+}
+
+// Checkout returns razorpay_signature = HMAC(payment_id|subscription_id) for the authorisation payment
+export function verifySubscriptionSignature(params: {
+  razorpaySubscriptionId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
+}): boolean {
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keySecret || !params.razorpaySignature) return false;
+  const expected = crypto
+    .createHmac('sha256', keySecret)
+    .update(`${params.razorpayPaymentId}|${params.razorpaySubscriptionId}`)
+    .digest('hex');
+  const a = Buffer.from(params.razorpaySignature, 'hex');
+  const b = Buffer.from(expected, 'hex');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 // Strict cryptographic verification of raw webhook payload
 export function verifyWebhookSignature(
   rawBody: string,
