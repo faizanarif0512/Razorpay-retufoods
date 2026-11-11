@@ -19,7 +19,17 @@ export interface InvoiceRecord {
   created_at: string;
 }
 
-export function generateInvoicePdfBuffer(order: Order, invoice: InvoiceRecord): Promise<Buffer> {
+// Adds each line's batch code(s) when the caller hasn't, so emailed invoices show them too
+export async function generateInvoicePdfBuffer(order: Order, invoice: InvoiceRecord): Promise<Buffer> {
+  if (!(order.items || []).some((i: any) => i.batch_text !== undefined)) {
+    const { getOrderBatches, batchSummary } = await import('../db/batches');
+    const lines = await getOrderBatches(order.id);
+    order = { ...order, items: (order.items || []).map((i) => ({ ...i, batch_text: batchSummary(lines, i.id) }) as any) };
+  }
+  return buildInvoicePdf(order, invoice);
+}
+
+function buildInvoicePdf(order: Order, invoice: InvoiceRecord): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ margin: 40, size: 'A4' });
@@ -90,13 +100,16 @@ export function generateInvoicePdfBuffer(order: Order, invoice: InvoiceRecord): 
         doc.fillColor('#374151').fontSize(8.5).font('Helvetica');
         doc.text(String(idx + 1), 45, curY);
         doc.font('Helvetica-Bold').text(item.product_name, 65, curY);
-        doc.font('Helvetica').fillColor('#6B7280').text(item.variant_name, 65, curY + 11);
+        doc.font('Helvetica').fillColor('#6B7280').text(item.variant_name, 65, curY + 11, { width: 215 });
+        // Batch code(s) and best-before for this line, set by stock allocation
+        const batchText = (item as any).batch_text as string | undefined;
+        if (batchText) doc.fontSize(7.5).text(`Batch: ${batchText}`, 65, curY + 22, { width: 215 }).fontSize(8.5);
         doc.fillColor('#374151').text(item.sku, 290, curY);
         doc.text(String(item.quantity), 370, curY, { width: 30, align: 'right' });
         doc.text(`Rs. ${(item.unit_price_paise / 100).toFixed(2)}`, 415, curY, { width: 60, align: 'right' });
         doc.font('Helvetica-Bold').text(`Rs. ${(item.total_price_paise / 100).toFixed(2)}`, 485, curY, { width: 65, align: 'right' });
 
-        curY += 26;
+        curY += (item as any).batch_text ? 36 : 26;
         doc.strokeColor('#F3F4F6').lineWidth(0.5).moveTo(40, curY).lineTo(555, curY).stroke();
         curY += 6;
       });

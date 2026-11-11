@@ -1,0 +1,6 @@
+-- Batch tracking (applied to retufoods-store 2026-11-11). See the applied migration "stock_batches"
+-- for the full function bodies: allocate_item_batches, release_order_batches, set_item_batches.
+-- stock_batches: one row per production batch per pack (batch code, manufactured, best-before, units).
+-- order_item_batches: which batch(es) each order line's units came from; a line may span batches.
+-- Paid orders are allocated first-expiry-first-out; cancel/refund with restock returns the units.
+-- Existing stock was loaded as an "OPENING" batch per variant for the team to rename.

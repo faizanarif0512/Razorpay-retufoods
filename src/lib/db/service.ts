@@ -451,6 +451,11 @@ export async function markOrderPaid(
     .eq('order_id', orderId)
     .neq('status', 'captured'));
 
+  // Assign production batches (earliest best-before first) before the invoice is generated
+  const { allocateOrderBatches } = await import('./batches');
+  const unallocated = await allocateOrderBatches(orderId);
+  if (unallocated > 0) console.warn('[BATCHES]', orderId, unallocated, 'unit(s) without a batch, assign them in admin');
+
   // Generate the tax invoice once payment is confirmed.
   await generateInvoiceRecord(orderId);
 
@@ -470,6 +475,7 @@ export async function markOrderPaymentFailed(
 
   if (order.payment_status !== 'paid') {
     check(await sb.rpc('restock_order', { p_order_id: orderId }));
+    await (await import('./batches')).releaseOrderBatches(orderId);
     check(await sb.from('orders')
       .update({ payment_status: 'failed', fulfilment_status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', orderId)
@@ -511,6 +517,7 @@ export async function adminCancelOrder(
 
   if (shouldRestock) {
     check(await sb.rpc('restock_order', { p_order_id: orderId }));
+    await (await import('./batches')).releaseOrderBatches(orderId);
   }
 
   check(await sb.from('orders').update({
@@ -660,6 +667,7 @@ export async function createOrderRefund(params: {
 
   if (shouldRestock) {
     check(await sb.rpc('restock_order', { p_order_id: params.orderId }));
+    await (await import('./batches')).releaseOrderBatches(params.orderId);
   }
 
   const update: Record<string, any> = {

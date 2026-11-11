@@ -26,6 +26,8 @@ import {
 import { Order, Product } from '@/types';
 import AdminSubscriptionsPanel from './AdminSubscriptionsPanel';
 import AdminLocationsPanel from './AdminLocationsPanel';
+import AdminBatchesPanel from './AdminBatchesPanel';
+import OrderBatchEditor from './OrderBatchEditor';
 import { useOrderUpdates } from '@/lib/supabase/useOrderUpdates';
 
 interface AdminDashboardClientProps {
@@ -42,7 +44,7 @@ export default function AdminDashboardClient({
   adminEmail,
 }: AdminDashboardClientProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'subscriptions' | 'products' | 'locations'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'subscriptions' | 'products' | 'batches' | 'locations'>('overview');
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>(initialOrders);
@@ -348,6 +350,18 @@ export default function AdminDashboardClient({
           </button>
 
           <button
+            onClick={() => setActiveTab('batches')}
+            className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
+              activeTab === 'batches'
+                ? 'border-retu-charcoal text-retu-charcoal'
+                : 'border-transparent text-gray-400 hover:text-gray-700'
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            <span>Batches</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('locations')}
             className={`py-3 flex items-center gap-2 border-b-2 transition-all ${
               activeTab === 'locations'
@@ -375,6 +389,7 @@ export default function AdminDashboardClient({
         
         {/* ================= OVERVIEW TAB ================= */}
         {activeTab === 'subscriptions' && <AdminSubscriptionsPanel />}
+        {activeTab === 'batches' && <AdminBatchesPanel />}
         {activeTab === 'locations' && <AdminLocationsPanel />}
 
         {activeTab === 'overview' && (
@@ -740,6 +755,16 @@ export default function AdminDashboardClient({
                       </div>
                     ))}
                   </div>
+
+                  {/* Batch numbers for each line (editable until dispatch) */}
+                  {selectedOrder.payment_status === 'paid' && (
+                    <div className="p-4 bg-white border border-gray-200 rounded-xl">
+                      <OrderBatchEditor
+                        orderId={selectedOrder.id}
+                        locked={selectedOrder.fulfilment_status === 'shipped' || selectedOrder.fulfilment_status === 'delivered'}
+                      />
+                    </div>
+                  )}
 
                   {/* Update Fulfilment Status */}
                   <div className="p-4 bg-gray-50 rounded-xl space-y-3 text-xs">

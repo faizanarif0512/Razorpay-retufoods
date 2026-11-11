@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOrderById, getInvoiceByOrderId } from '@/lib/db/service';
 import { generateInvoicePdfBuffer } from '@/lib/invoices/pdf';
+import { getOrderBatches, batchSummary } from '@/lib/db/batches';
 import { canAccessOrder } from '@/lib/auth/customer';
 
 export async function GET(
@@ -25,6 +26,10 @@ export async function GET(
       );
     }
 
+    // Attach each line's batch code(s) so the invoice matches the packs delivered
+    const batchLines = await getOrderBatches(orderId);
+    order.items = (order.items || []).map((i) => ({ ...i, batch_text: batchSummary(batchLines, i.id) } as any));
+
     // Customer-entered fields go into HTML below, so escape them to prevent stored XSS
     const esc = (v: unknown) =>
       String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -34,7 +39,7 @@ export async function GET(
       order_reference: esc(order.order_reference),
       customer_phone: esc(order.customer_phone),
       razorpay_payment_id: order.razorpay_payment_id ? esc(order.razorpay_payment_id) : order.razorpay_payment_id,
-      items: (order.items || []).map((i) => ({ ...i, product_name: esc(i.product_name), variant_name: esc(i.variant_name), sku: esc(i.sku) })),
+      items: (order.items || []).map((i: any) => ({ ...i, product_name: esc(i.product_name), variant_name: esc(i.variant_name), sku: esc(i.sku), batch_text: esc(i.batch_text) })),
     };
 
     const url = new URL(req.url);
@@ -237,6 +242,7 @@ export async function GET(
                 <td>
                   <strong>${item.product_name}</strong><br/>
                   <span style="color: #777; font-size: 11px;">${item.variant_name}</span>
+                  ${(item as any).batch_text ? `<br/><span style="color: #777; font-size: 10px;">Batch: ${(item as any).batch_text}</span>` : ''}
                 </td>
                 <td style="font-family: monospace;">${item.sku}</td>
                 <td class="text-right">${item.quantity}</td>
