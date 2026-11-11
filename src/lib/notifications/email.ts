@@ -1006,3 +1006,23 @@ export async function sendSubscriptionCancelledEmail(info: SubscriptionEmailInfo
     text: `Dear ${info.customer_name},\n\nYour ${info.planName} has been cancelled. You won't be charged again.\n\nRetü Foods`,
   });
 }
+
+// Tells the team (and the customer) that a delivery address changed before dispatch
+export async function sendAddressChangedAlert(updated: Order, previous: Order): Promise<void> {
+  const fmt = (o: Order) =>
+    `${o.customer_name}, ${o.shipping_address_line1}${o.shipping_address_line2 ? ', ' + o.shipping_address_line2 : ''}, ${o.shipping_city}, ${o.shipping_state} ${o.shipping_postal_code} · ${o.customer_phone}`;
+  const adminEmail = process.env.EMAIL_ADMIN_NOTIFY || 'faizan.loyola@gmail.com';
+  await sendTransactionalEmail({
+    to: adminEmail,
+    subject: `[Address changed] ${updated.order_reference} - update the dispatch label`,
+    html: `<p>The delivery address for <strong>${updated.order_reference}</strong> was changed by the customer before dispatch.</p>
+      <p><strong>New:</strong> ${fmt(updated)}</p><p style="color:#777"><strong>Old:</strong> ${fmt(previous)}</p>`,
+    text: `Address changed for ${updated.order_reference}.\nNew: ${fmt(updated)}\nOld: ${fmt(previous)}`,
+  });
+  await sendTransactionalEmail({
+    to: updated.customer_email,
+    subject: `Delivery address updated: ${updated.order_reference} - Retü Foods`,
+    html: `<p>Dear <strong>${updated.customer_name}</strong>,</p><p>Your order <strong>${updated.order_reference}</strong> will now be delivered to:</p><p>${fmt(updated)}</p><p style="font-size:13px;color:#777">Didn’t make this change? Reply to this email straight away.</p>`,
+    text: `Your order ${updated.order_reference} will now be delivered to: ${fmt(updated)}`,
+  });
+}

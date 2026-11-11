@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Loader2, Snowflake, Truck, CalendarClock, CreditCard, AlertCircle } from 'lucide-react';
 import PincodeNotice from '@/components/store/PincodeNotice';
+import SavedAddressPicker from '@/components/store/SavedAddressPicker';
 import { INDIAN_STATES, usePincodeLookup } from '@/lib/pincodeClient';
 
 declare global {
@@ -266,6 +267,20 @@ export default function SubscribeClient() {
               </div>
             ) : (
               <div className="mt-4 space-y-4 rounded-2xl bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+                <SavedAddressPicker
+                  signedIn={eligibility.signedIn}
+                  onPick={(a) =>
+                    setForm({
+                      name: a.name,
+                      phone: a.phone,
+                      address_line1: a.address_line1,
+                      address_line2: a.address_line2 || '',
+                      city: a.city,
+                      state: a.state,
+                      postal_code: a.postal_code,
+                    })
+                  }
+                />
                 <Field label="Full name" value={form.name} onChange={set('name')} required />
                 <Field label="Mobile number" type="tel" value={form.phone} onChange={set('phone')} required />
                 <Field label="Address line 1" value={form.address_line1} onChange={set('address_line1')} required />

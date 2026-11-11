@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkPincode, NOT_SERVICEABLE_MESSAGE } from '@/lib/db/pincodes';
+import { rememberAddress } from '@/lib/db/addresses';
 import { getCustomerFromRequest } from '@/lib/auth/customer';
 import { updateCustomerProfile } from '@/lib/db/service';
 import { getPlanById, createPendingSubscription, cycleTotalPaise, hasLiveSubscription } from '@/lib/db/subscriptions';
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
 
     const address = { name, phone, address_line1, address_line2, city, state, postal_code };
     await updateCustomerProfile(customer.id, { name, phone, address_line1, address_line2, city, state, postal_code } as any);
+    await rememberAddress(customer.id, { ...address, address_line2: address_line2 || null });
     const { subscription, isSimulator } = await createPendingSubscription(customer, plan, address);
 
     return NextResponse.json({

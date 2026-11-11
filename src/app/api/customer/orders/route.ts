@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCustomerFromRequest } from '@/lib/auth/customer';
 import { getOrdersByCustomerId } from '@/lib/db/service';
+import { addressChangeRule } from '@/lib/db/addresses';
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,7 +13,8 @@ export async function GET(req: NextRequest) {
     const orders = await getOrdersByCustomerId(customer.id);
     return NextResponse.json({
       success: true,
-      orders,
+      // Each order says whether its delivery address can still be changed, and until when
+      orders: orders.map((o) => ({ ...o, address_change: addressChangeRule(o) })),
       customer,
     });
   } catch (err: any) {

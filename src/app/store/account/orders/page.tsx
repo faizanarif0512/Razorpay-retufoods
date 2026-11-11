@@ -17,8 +17,10 @@ import {
   RotateCcw,
   CheckCircle2,
   X,
+  MapPin,
 } from 'lucide-react';
 import { Order } from '@/types';
+import ChangeAddressModal from '@/components/store/ChangeAddressModal';
 import { useOrderUpdates } from '@/lib/supabase/useOrderUpdates';
 
 export default function OrderHistoryPage() {
@@ -35,6 +37,9 @@ export default function OrderHistoryPage() {
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
+  // Change-address modal
+  const [addressOrder, setAddressOrder] = useState<any | null>(null);
+  const [addressMessage, setAddressMessage] = useState<string | null>(null);
 
   // Manual lookup state (if guest/unauthenticated lookup is used)
   const [lookupEmail, setLookupEmail] = useState('');
@@ -175,6 +180,12 @@ export default function OrderHistoryPage() {
             View your permanent orders, cold-chain shipment dispatches, and download official GST tax invoices.
           </p>
         </div>
+
+        {addressMessage && (
+          <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center text-xs font-semibold text-emerald-800">
+            {addressMessage}
+          </div>
+        )}
 
         {/* Authenticated Customer Banner */}
         {checkingAuth ? (
@@ -443,6 +454,18 @@ export default function OrderHistoryPage() {
                     </Link>
 
                     <div className="flex items-center gap-2">
+                      {(order as any).address_change?.allowed && (
+                        <button
+                          onClick={() => {
+                            setAddressOrder(order);
+                            setAddressMessage(null);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-retu-charcoal hover:bg-gray-100 border border-gray-300 rounded-lg font-semibold transition-colors"
+                        >
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span>Change address</span>
+                        </button>
+                      )}
                       {order.payment_status === 'paid' &&
                         !order.cancellation_status &&
                         (order.fulfilment_status === 'pending' ||
@@ -506,6 +529,19 @@ export default function OrderHistoryPage() {
       </div>
 
       {/* Customer Pre-Dispatch Cancellation Modal */}
+      {addressOrder && (
+        <ChangeAddressModal
+          order={addressOrder}
+          onClose={() => setAddressOrder(null)}
+          onChanged={async (msg) => {
+            setAddressOrder(null);
+            setAddressMessage(msg);
+            const r = await fetch('/api/customer/orders');
+            if (r.ok) setOrders((await r.json()).orders || []);
+          }}
+        />
+      )}
+
       {selectedCancelOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl border border-gray-100">

@@ -97,6 +97,8 @@ export interface Order {
   cancellation_requested_at?: string | null;
   cancellation_admin_notes?: string | null;
   stock_restored?: number;
+  order_type?: 'one_time' | 'trial' | 'subscription';
+  subscription_id?: string | null;
   created_at: string;
   updated_at: string;
   items?: OrderItem[];

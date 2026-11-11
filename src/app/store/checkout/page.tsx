@@ -8,6 +8,7 @@ import { ShieldCheck, ArrowLeft, Lock, Loader2, AlertCircle, User, CheckCircle2 
 import { useCart } from '@/context/CartContext';
 import RazorpayPaymentModal from '@/components/checkout/RazorpayPaymentModal';
 import PincodeNotice from '@/components/store/PincodeNotice';
+import SavedAddressPicker from '@/components/store/SavedAddressPicker';
 import { INDIAN_STATES, usePincodeLookup } from '@/lib/pincodeClient';
 
 export default function CheckoutPage() {
@@ -455,6 +456,22 @@ export default function CheckoutPage() {
                 <h3 className="text-sm font-bold text-retu-charcoal uppercase tracking-wider border-b border-retu-border pb-3">
                   2. Cold-Chain Delivery Address
                 </h3>
+
+                <SavedAddressPicker
+                  signedIn={!!customer}
+                  onPick={(a) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      customer_name: prev.customer_name || a.name,
+                      customer_phone: a.phone || prev.customer_phone,
+                      shipping_address_line1: a.address_line1,
+                      shipping_address_line2: a.address_line2 || '',
+                      shipping_city: a.city,
+                      shipping_state: a.state,
+                      shipping_postal_code: a.postal_code,
+                    }))
+                  }
+                />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">

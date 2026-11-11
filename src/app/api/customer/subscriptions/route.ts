@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkPincode, NOT_SERVICEABLE_MESSAGE } from '@/lib/db/pincodes';
+import { listAddresses, validateAddress, applyOrderAddress, getEditableSubscriptionOrders } from '@/lib/db/addresses';
+import { getOrderById } from '@/lib/db/service';
 import { getCustomerFromRequest } from '@/lib/auth/customer';
 import {
   getSubscriptionsByCustomer,
@@ -14,7 +15,7 @@ import {
   pauseRazorpaySubscription,
   resumeRazorpaySubscription,
 } from '@/lib/payments/razorpay';
-import { sendSubscriptionCancelledEmail } from '@/lib/notifications/email';
+import { sendSubscriptionCancelledEmail, sendAddressChangedAlert } from '@/lib/notifications/email';
 
 export async function GET(req: NextRequest) {
   const customer = await getCustomerFromRequest(req);
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
   if (!customer) return NextResponse.json({ success: false, error: 'Please sign in' }, { status: 401 });
 
   try {
-    const { subscriptionId, action, address } = await req.json();
+    const { subscriptionId, action, address, addressId } = await req.json();
     const sub = await getSubscriptionById(subscriptionId);
     if (!sub || sub.customer_id !== customer.id || !sub.razorpay_subscription_id) {
       return NextResponse.json({ success: false, error: 'Subscription not found' }, { status: 404 });
@@ -89,19 +90,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, subscription: await setSubscriptionFlags(sub.id, { status: 'active' }) });
     }
 
+    // Subscription addresses can change at any time. The new address applies to every future box,
+    // and also to any box from this subscription that is paid but not yet packed or dispatched.
     if (action === 'address') {
-      const a = address || {};
-      if (!a.name?.trim() || !a.address_line1?.trim() || !a.city?.trim() || !a.state?.trim()) {
-        return NextResponse.json({ success: false, error: 'Please complete the delivery address' }, { status: 400 });
+      let raw = address;
+      if (addressId) {
+        raw = (await listAddresses(customer.id)).find((x) => x.id === addressId);
+        if (!raw) return NextResponse.json({ success: false, error: 'Saved address not found' }, { status: 404 });
       }
-      if (!/^\d{6}$/.test((a.postal_code || '').trim()) || (a.phone || '').replace(/\D/g, '').length < 10) {
-        return NextResponse.json({ success: false, error: 'Valid PIN code and phone number are required' }, { status: 400 });
+      let a;
+      try {
+        a = await validateAddress(raw || {}, true);
+      } catch (e: any) {
+        return NextResponse.json({ success: false, error: e.message }, { status: 400 });
       }
-      const pin = await checkPincode(a.postal_code);
-      if (!pin.serviceable) {
-        return NextResponse.json({ success: false, error: NOT_SERVICEABLE_MESSAGE }, { status: 400 });
+      const updated = await updateSubscriptionAddress(sub.id, a);
+      const pendingBoxes = await getEditableSubscriptionOrders(sub.id);
+      for (const box of pendingBoxes) {
+        await applyOrderAddress(box, a, `customer:${customer.id}`);
+        const after = await getOrderById(box.id);
+        if (after) sendAddressChangedAlert(after, box).catch(console.error);
       }
-      return NextResponse.json({ success: true, subscription: await updateSubscriptionAddress(sub.id, a) });
+      return NextResponse.json({ success: true, subscription: updated, updatedBoxes: pendingBoxes.map((b) => b.order_reference) });
     }
 
     return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });

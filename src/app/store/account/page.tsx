@@ -138,22 +138,31 @@ export default function CustomerAccountHub() {
             </div>
           </Link>
 
-          {/* Saved Details */}
-          <div className="bg-white p-6 rounded-2xl border border-retu-border shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-700 flex items-center justify-center mb-4">
-              <MapPin className="w-5 h-5" />
+          {/* Saved Addresses */}
+          <Link
+            href="/store/account/addresses"
+            className="bg-white p-6 rounded-2xl border border-retu-border shadow-sm hover:shadow-md transition-shadow group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-700 flex items-center justify-center mb-4">
+                <MapPin className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold text-retu-charcoal group-hover:text-retu-pink transition-colors">Saved Addresses</h3>
+              <div className="mt-2 text-xs text-gray-600 space-y-1">
+                <p><strong>Email:</strong> {customer.email}</p>
+                <p><strong>Phone:</strong> {customer.phone}</p>
+                {customer.address_line1 && (
+                  <p>
+                    <strong>Default:</strong> {customer.address_line1}, {customer.city}, {customer.state} - {customer.postal_code}
+                  </p>
+                )}
+              </div>
             </div>
-            <h3 className="text-base font-bold text-retu-charcoal">Saved Delivery Profile</h3>
-            <div className="mt-2 text-xs text-gray-600 space-y-1">
-              <p><strong>Email:</strong> {customer.email}</p>
-              <p><strong>Phone:</strong> {customer.phone}</p>
-              {customer.address_line1 && (
-                <p>
-                  <strong>Address:</strong> {customer.address_line1}, {customer.city}, {customer.state} - {customer.postal_code}
-                </p>
-              )}
+            <div className="pt-4 flex items-center gap-1 text-xs font-bold text-retu-charcoal group-hover:text-retu-pink transition-colors">
+              <span>Manage addresses</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </div>
-          </div>
+          </Link>
 
         </div>
 

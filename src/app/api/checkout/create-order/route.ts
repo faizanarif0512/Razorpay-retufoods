@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkPincode, NOT_SERVICEABLE_MESSAGE } from '@/lib/db/pincodes';
+import { rememberAddress } from '@/lib/db/addresses';
 import {
   createOrderWithReservation,
   attachRazorpayOrderId,
@@ -163,6 +164,17 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Keep the address in the customer's address book for next time
+    await rememberAddress(customer.id, {
+      name: customer_name.trim(),
+      phone: customer_phone.trim(),
+      address_line1: shipping_address_line1.trim(),
+      address_line2: shipping_address_line2?.trim() || null,
+      city: shipping_city.trim(),
+      state: shipping_state.trim(),
+      postal_code: shipping_postal_code.trim(),
+    });
 
     // 1. Create order and reserve stock server-side with customer_id
     const { order, razorpayAmountPaise } = await createOrderWithReservation({
