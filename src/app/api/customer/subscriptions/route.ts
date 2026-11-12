@@ -59,10 +59,11 @@ export async function POST(req: NextRequest) {
       if (['cancelled', 'completed', 'expired'].includes(sub.status)) {
         return NextResponse.json({ success: false, error: 'This subscription has already ended' }, { status: 400 });
       }
-      // Ends after the current cycle so the customer keeps the box they've paid for
-      const atCycleEnd = sub.status === 'active';
-      await cancelRazorpaySubscription(rzpId, atCycleEnd);
-      const updated = await setSubscriptionFlags(sub.id, atCycleEnd ? { cancel_at_cycle_end: true } : { status: 'cancelled' });
+      // Stop billing on Razorpay straight away. A box already paid for is its own order,
+      // so it still ships; nothing further is charged.
+      const atCycleEnd = false;
+      await cancelRazorpaySubscription(rzpId, false);
+      const updated = await setSubscriptionFlags(sub.id, { status: 'cancelled', cancel_at_cycle_end: false });
       sendSubscriptionCancelledEmail({
         customer_name: sub.customer_name,
         customer_email: sub.customer_email,

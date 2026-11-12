@@ -994,7 +994,7 @@ export async function sendSubscriptionCancelledEmail(info: SubscriptionEmailInfo
   const html = subscriptionEmailShell(
     'Your subscription has been cancelled',
     `<p>Dear <strong>${info.customer_name}</strong>,</p>
-     <p>Your <strong>${info.planName}</strong> has been cancelled${info.atCycleEnd ? ` and will end after your current cycle (${niceDate(info.nextChargeAt)})` : ''}. You won’t be charged again.</p>
+     <p>Your <strong>${info.planName}</strong> has been cancelled${info.atCycleEnd ? ` and will end after your current cycle (${niceDate(info.nextChargeAt)})` : ''}. You won’t be charged again. Any box you’ve already paid for will still be delivered.</p>
      <p>We’d love to have you back whenever you’re ready.</p>`,
     'Visit the store',
     `${storeUrl}/store`
